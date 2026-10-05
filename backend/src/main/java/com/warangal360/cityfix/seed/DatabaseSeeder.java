@@ -17,6 +17,7 @@ import com.warangal360.cityfix.user.AccountStatus;
 import com.warangal360.cityfix.user.Role;
 import com.warangal360.cityfix.user.User;
 import com.warangal360.cityfix.user.UserRepository;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -36,6 +37,7 @@ public class DatabaseSeeder implements CommandLineRunner {
     private final EmergencyContactRepository contactRepository;
     private final NoticeRepository noticeRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JdbcTemplate jdbcTemplate;
 
     public DatabaseSeeder(UserRepository userRepository,
                           DepartmentRepository departmentRepository,
@@ -45,7 +47,8 @@ public class DatabaseSeeder implements CommandLineRunner {
                           EscalationLogRepository escalationLogRepository,
                           EmergencyContactRepository contactRepository,
                           NoticeRepository noticeRepository,
-                          PasswordEncoder passwordEncoder) {
+                          PasswordEncoder passwordEncoder,
+                          JdbcTemplate jdbcTemplate) {
         this.userRepository = userRepository;
         this.departmentRepository = departmentRepository;
         this.reportRepository = reportRepository;
@@ -55,105 +58,78 @@ public class DatabaseSeeder implements CommandLineRunner {
         this.contactRepository = contactRepository;
         this.noticeRepository = noticeRepository;
         this.passwordEncoder = passwordEncoder;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     @Override
     public void run(String... args) {
-        if (departmentRepository.count() > 0) {
-            return; // Already seeded
+        // 1. Departments (Ensure all required departments exist)
+        Department sanitation = getOrCreateDepartment("Sanitation", "sanitation@warangal.gov.in", "+918702450001", "Municipal Solid Waste, Sweeping, and Drain Clearance");
+        Department roads = getOrCreateDepartment("Roads", "roads@warangal.gov.in", "+918702450002", "Potholes, Road Repair, Footpaths, and Bitumen Overlay");
+        Department electricity = getOrCreateDepartment("Electricity", "electricity@warangal.gov.in", "+918702450003", "Streetlights, Hanging Cables, and Transformer Issues (TSNPDCL)");
+        Department water = getOrCreateDepartment("Water Department", "water@warangal.gov.in", "+918702450004", "Pipeline Leaks, Water Supply Contamination, and Valve Repairs (Mission Bhagiratha)");
+        Department disaster = getOrCreateDepartment("Disaster Management", "disaster@warangal.gov.in", "+918702450005", "Severe Waterlogging, Fallen Trees, and Storm Emergency Response");
+        Department health = getOrCreateDepartment("Health", "health@warangal.gov.in", "+918702450006", "Public Health, Disease Vector Control, Food Safety & Government Hospitals");
+        Department municipality = getOrCreateDepartment("Municipality", "gwmc@warangal.gov.in", "+918702450007", "Greater Warangal Municipal Corporation - Civic Administration & Town Planning");
+        Department police = getOrCreateDepartment("Police", "police@warangal.gov.in", "+918702450008", "Warangal City Police - Law & Order, Traffic & Citizen Security");
+        Department fireEmergency = getOrCreateDepartment("Fire Emergency", "fire@warangal.gov.in", "+918702450009", "Fire & Rescue Services, Disaster Response & Hazardous Situations");
+        Department others = getOrCreateDepartment("Others", "grievances@warangal.gov.in", "+918702450010", "General Civic Inquiries, Encroachments, Environmental & Other Grievances");
+
+        // 2. SLA Settings (Ensure seeded)
+        if (slaSettingRepository.count() == 0) {
+            slaSettingRepository.save(new SlaSetting(Category.ELECTRICAL_HAZARD, 2, 24));
+            slaSettingRepository.save(new SlaSetting(Category.FALLEN_TREE, 4, 48));
+            slaSettingRepository.save(new SlaSetting(Category.WATERLOGGING, 6, 48));
+            slaSettingRepository.save(new SlaSetting(Category.WATER_LEAKAGE, 24, 72));
+            slaSettingRepository.save(new SlaSetting(Category.STREETLIGHT, 24, 72));
+            slaSettingRepository.save(new SlaSetting(Category.GARBAGE, 24, 48));
+            slaSettingRepository.save(new SlaSetting(Category.ROADS, 24, 168));
+            slaSettingRepository.save(new SlaSetting(Category.OTHER, 24, 168));
         }
 
-        // 1. Departments
-        Department sanitation = departmentRepository.save(new Department("Sanitation", "sanitation@warangal.gov.in", "+918702450001", "Municipal Solid Waste, Sweeping, and Drain Clearance"));
-        Department roads = departmentRepository.save(new Department("Roads", "roads@warangal.gov.in", "+918702450002", "Potholes, Road Repair, Footpaths, and Bitumen Overlay"));
-        Department electricity = departmentRepository.save(new Department("Electricity", "electricity@warangal.gov.in", "+918702450003", "Streetlights, Hanging Cables, and Transformer Issues (TSNPDCL)"));
-        Department water = departmentRepository.save(new Department("Water", "water@warangal.gov.in", "+918702450004", "Pipeline Leaks, Water Supply Contamination, and Valve Repairs"));
-        Department disaster = departmentRepository.save(new Department("Disaster Management", "disaster@warangal.gov.in", "+918702450005", "Severe Waterlogging, Fallen Trees, and Storm Emergency Response"));
-
-        // 2. SLA Settings
-        slaSettingRepository.save(new SlaSetting(Category.ELECTRICAL_HAZARD, 2, 24));
-        slaSettingRepository.save(new SlaSetting(Category.FALLEN_TREE, 4, 48));
-        slaSettingRepository.save(new SlaSetting(Category.WATERLOGGING, 6, 48));
-        slaSettingRepository.save(new SlaSetting(Category.WATER_LEAKAGE, 24, 72));
-        slaSettingRepository.save(new SlaSetting(Category.STREETLIGHT, 24, 72));
-        slaSettingRepository.save(new SlaSetting(Category.GARBAGE, 24, 48));
-        slaSettingRepository.save(new SlaSetting(Category.ROADS, 24, 168));
-        slaSettingRepository.save(new SlaSetting(Category.OTHER, 24, 168));
-
         // 3. Emergency Contacts
-        contactRepository.save(new EmergencyContact("Police Control Room", "పోలీస్ కంట్రోల్ రూమ్", "100", "POLICE", 1));
-        contactRepository.save(new EmergencyContact("Ambulance / Emergency Medical", "అంబులెన్స్ మెడికల్ సర్వీస్", "108", "AMBULANCE", 2));
-        contactRepository.save(new EmergencyContact("Fire & Rescue Services", "అగ్నిమాపక కేంద్రం", "101", "FIRE", 3));
-        contactRepository.save(new EmergencyContact("Women Helpline", "మహిళా హెల్ప్‌లైన్", "1091", "POLICE", 4));
-        contactRepository.save(new EmergencyContact("GWMC Toll-Free Civic Grievance", "వరంగల్ మున్సిపల్ టోల్ ఫ్రీ", "1800-425-1980", "MUNICIPAL", 5));
-        contactRepository.save(new EmergencyContact("TSNPDCL Electricity Warangal", "విద్యుత్ హెల్ప్‌లైన్", "1912", "ELECTRICITY", 6));
-        contactRepository.save(new EmergencyContact("Mission Bhagiratha Water Board", "మిషన్ భగీరథ నీటి సరఫరా", "0870-2456789", "WATER", 7));
-        contactRepository.save(new EmergencyContact("MGM Government Hospital Emergency", "ఎంజీఎం హాస్పిటల్ ఎమర్జెన్సీ", "0870-2441234", "AMBULANCE", 8));
+        if (contactRepository.count() == 0) {
+            contactRepository.save(new EmergencyContact("Police Control Room", "పోలీస్ కంట్రోల్ రూమ్", "100", "POLICE", 1));
+            contactRepository.save(new EmergencyContact("Ambulance / Emergency Medical", "అంబులెన్స్ మెడికల్ సర్వీస్", "108", "AMBULANCE", 2));
+            contactRepository.save(new EmergencyContact("Fire & Rescue Services", "అగ్నిమాపక కేంద్రం", "101", "FIRE", 3));
+            contactRepository.save(new EmergencyContact("Women Helpline", "మహిళా హెల్ప్‌లైన్", "1091", "POLICE", 4));
+            contactRepository.save(new EmergencyContact("GWMC Toll-Free Civic Grievance", "వరంగల్ మున్సిపల్ టోల్ ఫ్రీ", "1800-425-1980", "MUNICIPAL", 5));
+            contactRepository.save(new EmergencyContact("TSNPDCL Electricity Warangal", "విద్యుత్ హెల్ప్‌లైన్", "1912", "ELECTRICITY", 6));
+            contactRepository.save(new EmergencyContact("Mission Bhagiratha Water Board", "మిషన్ భగీరథ నీటి సరఫరా", "0870-2456789", "WATER", 7));
+            contactRepository.save(new EmergencyContact("MGM Government Hospital Emergency", "ఎంజీఎం హాస్పిటల్ ఎమర్జెన్సీ", "0870-2441234", "AMBULANCE", 8));
+        }
 
-        // 4. Users
-        // Admin
-        User admin = new User("Municipal Commissioner (Admin)", "+919999999999", passwordEncoder.encode("Admin@123"), Role.ROLE_ADMIN);
-        admin.setPreferredLanguage("en");
-        userRepository.save(admin);
+        // 4. Users (Admin and Citizens only - Department members to be added manually by Admin)
+        User admin = userRepository.findByPhone("+919999999999").orElseGet(() -> {
+            User a = new User("Municipal Commissioner (Admin)", "+919999999999", passwordEncoder.encode("Admin@123"), Role.ROLE_ADMIN);
+            a.setPreferredLanguage("en");
+            return userRepository.save(a);
+        });
 
-        // Department Heads (Level 1)
-        User sanHead = new User("Dr. K. Srinivas (Sanitation Head)", "+919888800001", passwordEncoder.encode("Warangal@123"), Role.ROLE_DEPT_HEAD);
-        sanHead.setDepartment(sanitation);
-        sanHead.setDesignationLevel(1);
-        userRepository.save(sanHead);
-
-        User roadHead = new User("Er. M. Rajendra (Roads Head)", "+919888800002", passwordEncoder.encode("Warangal@123"), Role.ROLE_DEPT_HEAD);
-        roadHead.setDepartment(roads);
-        roadHead.setDesignationLevel(1);
-        userRepository.save(roadHead);
-
-        User elecHead = new User("Er. V. Ramesh (Electricity Head)", "+919888800003", passwordEncoder.encode("Warangal@123"), Role.ROLE_DEPT_HEAD);
-        elecHead.setDepartment(electricity);
-        elecHead.setDesignationLevel(1);
-        userRepository.save(elecHead);
-
-        User waterHead = new User("Er. S. Anitha (Water Supply Head)", "+919888800004", passwordEncoder.encode("Warangal@123"), Role.ROLE_DEPT_HEAD);
-        waterHead.setDepartment(water);
-        waterHead.setDesignationLevel(1);
-        userRepository.save(waterHead);
-
-        User disasterHead = new User("Sri D. Prabhakar (Disaster Head)", "+919888800005", passwordEncoder.encode("Warangal@123"), Role.ROLE_DEPT_HEAD);
-        disasterHead.setDepartment(disaster);
-        disasterHead.setDesignationLevel(1);
-        userRepository.save(disasterHead);
-
-        // Department Officers (Level 0)
-        User sanOfficer = new User("P. Venkat (Sanitation Inspector)", "+919888811001", passwordEncoder.encode("Warangal@123"), Role.ROLE_OFFICIAL);
-        sanOfficer.setDepartment(sanitation);
-        sanOfficer.setDesignationLevel(0);
-        userRepository.save(sanOfficer);
-
-        User roadOfficer = new User("T. Sridhar (Roads AE)", "+919888811002", passwordEncoder.encode("Warangal@123"), Role.ROLE_OFFICIAL);
-        roadOfficer.setDepartment(roads);
-        roadOfficer.setDesignationLevel(0);
-        userRepository.save(roadOfficer);
-
-        User elecOfficer = new User("B. Mahesh (Electrical Lineman)", "+919888811003", passwordEncoder.encode("Warangal@123"), Role.ROLE_OFFICIAL);
-        elecOfficer.setDepartment(electricity);
-        elecOfficer.setDesignationLevel(0);
-        userRepository.save(elecOfficer);
+        // Safely reassign foreign keys and remove all previous department officials/heads (+9198888... series)
+        try {
+            jdbcTemplate.update("UPDATE audit_log SET actor_id = ? WHERE actor_id IN (SELECT id FROM users WHERE role IN ('ROLE_OFFICIAL', 'ROLE_DEPT_HEAD') OR phone LIKE '+9198888%' OR phone LIKE '98888%')", admin.getId());
+            jdbcTemplate.update("UPDATE status_updates SET updated_by_id = ? WHERE updated_by_id IN (SELECT id FROM users WHERE role IN ('ROLE_OFFICIAL', 'ROLE_DEPT_HEAD') OR phone LIKE '+9198888%' OR phone LIKE '98888%')", admin.getId());
+            jdbcTemplate.update("UPDATE escalation_log SET alerted_user_id = ? WHERE alerted_user_id IN (SELECT id FROM users WHERE role IN ('ROLE_OFFICIAL', 'ROLE_DEPT_HEAD') OR phone LIKE '+9198888%' OR phone LIKE '98888%')", admin.getId());
+            jdbcTemplate.update("UPDATE notices SET author_id = ? WHERE author_id IN (SELECT id FROM users WHERE role IN ('ROLE_OFFICIAL', 'ROLE_DEPT_HEAD') OR phone LIKE '+9198888%' OR phone LIKE '98888%')", admin.getId());
+            jdbcTemplate.update("DELETE FROM users WHERE role IN ('ROLE_OFFICIAL', 'ROLE_DEPT_HEAD') OR phone LIKE '+9198888%' OR phone LIKE '98888%'");
+        } catch (Exception e) {
+            // Ignore if tables don't exist yet
+        }
 
         // Citizens
-        User citizen1 = new User("Adarsh Arigela", "+919876543210", passwordEncoder.encode("Citizen@123"), Role.ROLE_CITIZEN);
-        citizen1.setPreferredLanguage("te");
-        userRepository.save(citizen1);
+        User citizen1 = getOrCreateCitizen("Adarsh Arigela", "+919876543210", "te");
+        User citizen2 = getOrCreateCitizen("Ramesh Babu", "+919876543211", "en");
+        User citizen3 = getOrCreateCitizen("Priya Sharma", "+919876543212", "en");
 
-        User citizen2 = new User("Ramesh Babu", "+919876543211", passwordEncoder.encode("Citizen@123"), Role.ROLE_CITIZEN);
-        citizen2.setPreferredLanguage("en");
-        userRepository.save(citizen2);
-
-        User citizen3 = new User("Priya Sharma", "+919876543212", passwordEncoder.encode("Citizen@123"), Role.ROLE_CITIZEN);
-        userRepository.save(citizen3);
+        if (reportRepository.count() > 0) {
+            return; // Demo reports already created
+        }
 
         // 5. Notices
         Notice notice1 = new Notice();
         notice1.setDepartment(electricity);
-        notice1.setAuthor(elecHead);
+        notice1.setAuthor(admin);
         notice1.setTitle("Planned Maintenance Power Shutdown - Hanamkonda Subedari");
         notice1.setMessageEn("Scheduled 33kV transformer maintenance and feeder overhaul. Power will be interrupted from 2:00 PM to 6:00 PM today.");
         notice1.setMessageTe("హనుమకొండ సుబేదారి ప్రాంతంలో 33kV ట్రాన్స్‌ఫార్మర్ మరమ్మతుల కారణంగా ఈరోజు మధ్యాహ్నం 2:00 నుండి సాయంత్రం 6:00 వరకు విద్యుత్ సరఫరా నిలిపివేయబడుతుంది.");
@@ -170,7 +146,7 @@ public class DatabaseSeeder implements CommandLineRunner {
 
         Notice notice2 = new Notice();
         notice2.setDepartment(disaster);
-        notice2.setAuthor(disasterHead);
+        notice2.setAuthor(admin);
         notice2.setTitle("Heavy Inundation Warning near Waddepally Tank");
         notice2.setMessageEn("Due to heavy rainfall upstream, low-lying storm channels near Waddepally cause temporary waterlogging. Emergency response pumps deployed.");
         notice2.setMessageTe("భారీ వర్షాల కారణంగా వడ్డేపల్లి చెరువు సమీప లోతట్టు ప్రాంతాలలో నీరు నిలిచే అవకాశం ఉంది. అత్యవసర డీవాటరింగ్ పంపులు ఏర్పాటు చేయబడ్డాయి.");
@@ -215,7 +191,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         Report savedR1 = reportRepository.save(r1);
 
         escalationLogRepository.save(new EscalationLog(
-                savedR1, 1, sanHead,
+                savedR1, 1, admin,
                 "Officer missed SLA response deadline of 24h. Auto-escalated to Department Head."
         ));
 
@@ -249,7 +225,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         Report savedR2 = reportRepository.save(r2);
 
         statusUpdateRepository.save(new StatusUpdate(
-                savedR2, elecOfficer, ReportStatus.IN_PROGRESS,
+                savedR2, admin, ReportStatus.IN_PROGRESS,
                 "Emergency team dispatched with insulated lift vehicle. Line isolated at Kazipet sub-station.", null
         ));
 
@@ -282,7 +258,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         Report savedR3 = reportRepository.save(r3);
 
         statusUpdateRepository.save(new StatusUpdate(
-                savedR3, roadOfficer, ReportStatus.ACKNOWLEDGED,
+                savedR3, admin, ReportStatus.ACKNOWLEDGED,
                 "Site inspected. Cold-mix patch work scheduled for tomorrow morning.", null
         ));
 
@@ -314,7 +290,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         Report savedR4 = reportRepository.save(r4);
 
         statusUpdateRepository.save(new StatusUpdate(
-                savedR4, waterHead, ReportStatus.RESOLVED,
+                savedR4, admin, ReportStatus.RESOLVED,
                 "Pipe segment replaced with new ductile iron collar. Water supply restored.",
                 "https://images.unsplash.com/photo-1584467735815-f778f274e296?w=600&auto=format&fit=crop&q=60"
         ));
@@ -346,4 +322,19 @@ public class DatabaseSeeder implements CommandLineRunner {
         r5.setResolutionDeadline(LocalDateTime.now().plusHours(45));
         reportRepository.save(r5);
     }
+
+    private Department getOrCreateDepartment(String name, String email, String phone, String description) {
+        return departmentRepository.findByNameIgnoreCase(name)
+                .orElseGet(() -> departmentRepository.save(new Department(name, email, phone, description)));
+    }
+
+    private User getOrCreateCitizen(String name, String phone, String lang) {
+        return userRepository.findByPhone(phone).orElseGet(() -> {
+            User citizen = new User(name, phone, passwordEncoder.encode("Citizen@123"), Role.ROLE_CITIZEN);
+            citizen.setPreferredLanguage(lang);
+            return userRepository.save(citizen);
+        });
+    }
 }
+
+

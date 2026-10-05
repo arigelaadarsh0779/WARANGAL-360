@@ -65,15 +65,8 @@ npm run dev
 | Role | Name | Phone / Login ID | Password |
 |---|---|---|---|
 | **Super Admin** | Municipal Commissioner | `+919999999999` | `Admin@123` |
-| **Dept Head (Sanitation)** | Dr. K. Srinivas | `+919888800001` | `Warangal@123` |
-| **Dept Head (Roads)** | Er. M. Rajendra | `+919888800002` | `Warangal@123` |
-| **Dept Head (Electricity)** | Er. V. Ramesh | `+919888800003` | `Warangal@123` |
-| **Dept Head (Water)** | Er. S. Anitha | `+919888800004` | `Warangal@123` |
-| **Dept Head (Disaster)** | Sri D. Prabhakar | `+919888800005` | `Warangal@123` |
-| **Field Officer (Sanitation)** | P. Venkat | `+919888811001` | `Warangal@123` |
-| **Field Officer (Roads)** | T. Sridhar | `+919888811002` | `Warangal@123` |
-| **Field Officer (Electricity)** | B. Mahesh | `+919888811003` | `Warangal@123` |
 | **Citizen** | Adarsh Arigela | `+919876543210` | `Citizen@123` |
 | **Citizen** | Ramesh Babu | `+919876543211` | `Citizen@123` |
+| **Citizen** | Priya Sharma | `+919876543212` | `Citizen@123` |
 
-*(All demo accounts can also be one-click auto-filled from the login screen).*
+> ℹ️ **Department Officials & Heads (L0 & L1)**: All pre-seeded officers have been cleared. Super Admin can add and manage officials with custom passwords directly from the **Super Admin Panel (`/admin`) → Officials Management**.

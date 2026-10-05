@@ -22,7 +22,11 @@ import {
   CheckCircle,
   Ban,
   RefreshCw,
-  Eye
+  Eye,
+  Trash2,
+  Lock,
+  Key,
+  ShieldCheck
 } from 'lucide-react';
 import { api } from '../services/api';
 import { Link } from 'react-router-dom';
@@ -44,8 +48,10 @@ export default function AdminPanel() {
   const [showOfficialModal, setShowOfficialModal] = useState(false);
   const [offName, setOffName] = useState('');
   const [offPhone, setOffPhone] = useState('');
+  const [offPassword, setOffPassword] = useState('');
+  const [offMustChange, setOffMustChange] = useState(false);
   const [offDeptId, setOffDeptId] = useState('');
-  const [offLevel, setOffLevel] = useState('0'); // 0: Officer, 1: Dept Head
+  const [offLevel, setOffLevel] = useState('0'); // 0: Officer (L0), 1: Dept Head (L1)
   const [creatingOfficial, setCreatingOfficial] = useState(false);
 
   // Edit SLA Modal
@@ -100,6 +106,10 @@ export default function AdminPanel() {
 
   const handleCreateOfficial = async (e) => {
     e.preventDefault();
+    if (offPassword && offPassword.length < 6) {
+      alert("Password must be at least 6 characters long.");
+      return;
+    }
     setCreatingOfficial(true);
     try {
       await api.createOfficial({
@@ -107,17 +117,33 @@ export default function AdminPanel() {
         phone: offPhone,
         departmentId: parseInt(offDeptId, 10),
         designationLevel: parseInt(offLevel, 10),
-        tempPassword: 'Warangal@123'
+        password: offPassword || 'Warangal@123',
+        mustChangePassword: offMustChange
       });
-      alert(`Official created successfully! Temporary password: Warangal@123`);
+      alert(`✓ Official "${offName}" created successfully with role ${offLevel === '1' ? 'Department Head (L1)' : 'Officer (L0)'}!`);
       setShowOfficialModal(false);
       setOffName('');
       setOffPhone('');
+      setOffPassword('');
+      setOffMustChange(false);
       loadAllAdminData();
     } catch (err) {
       alert("Failed to create official: " + err.message);
     } finally {
       setCreatingOfficial(false);
+    }
+  };
+
+  const handleDeleteOfficial = async (officialId, officialName) => {
+    if (!window.confirm(`Are you sure you want to delete officer "${officialName}"? This account will be completely removed.`)) {
+      return;
+    }
+    try {
+      await api.deleteOfficial(officialId);
+      alert(`✓ Officer "${officialName}" deleted successfully.`);
+      loadAllAdminData();
+    } catch (err) {
+      alert("Failed to delete official: " + err.message);
     }
   };
 
@@ -181,22 +207,22 @@ export default function AdminPanel() {
       {/* Top Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <h2 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--primary-dark)' }}>
-              Municipal Administration Console
-            </h2>
-            <span style={{ fontSize: '12px', padding: '2px 8px', borderRadius: '4px', backgroundColor: 'var(--primary-dark)', color: '#ffffff', fontWeight: 700 }}>
-              Super Admin
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <h1 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--primary-dark)' }}>
+              Admin Console
+            </h1>
+            <span style={{ fontSize: '11px', padding: '3px 10px', borderRadius: '100px', backgroundColor: '#0B2A5B', color: '#fff', fontWeight: 700, letterSpacing: '0.03em' }}>
+              SUPER ADMIN
             </span>
           </div>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Greater Warangal Municipal Corporation (GWMC) Control Hub</p>
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>Greater Warangal Municipal Corporation</p>
         </div>
 
         {/* Live Demo Trigger Button */}
         <button
           onClick={handleTriggerSlaDemo}
-          className="btn btn-sm btn-secondary"
-          style={{ backgroundColor: '#FEF3C7', color: '#B45309', borderColor: '#F59E0B', fontWeight: 700 }}
+          className="btn btn-sm"
+          style={{ background: '#FFFBEB', color: '#B45309', borderColor: '#F59E0B', fontWeight: 700, border: '1px solid #F59E0B' }}
           title="Simulate background cron execution immediately for live presentation"
         >
           <Play size={14} fill="currentColor" />
@@ -273,20 +299,22 @@ export default function AdminPanel() {
       {/* Tabs Bar */}
       <div style={{
         display: 'flex',
-        gap: '8px',
-        borderBottom: '1px solid var(--border)',
-        paddingBottom: '10px',
+        background: 'var(--surface-alt)',
+        borderRadius: '12px',
+        padding: '4px',
         marginBottom: '20px',
-        overflowX: 'auto'
+        overflowX: 'auto',
+        gap: '2px',
       }}>
         {[
-          { id: 'ANALYTICS', label: 'Civic Analytics', icon: BarChart3 },
-          { id: 'OFFICIALS', label: 'Department Officials', icon: Users },
-          { id: 'USERS', label: 'Citizen Moderation', icon: Ban },
-          { id: 'SLA', label: 'SLA Target Settings', icon: Clock },
-          { id: 'AUDIT', label: 'Audit Trail', icon: FileText }
+          { id: 'ANALYTICS', label: 'Analytics', icon: BarChart3 },
+          { id: 'OFFICIALS', label: 'Officials', icon: Users },
+          { id: 'USERS', label: 'Citizens', icon: Ban },
+          { id: 'SLA', label: 'SLA', icon: Clock },
+          { id: 'AUDIT', label: 'Audit', icon: FileText }
         ].map((tItem) => {
           const Icon = tItem.icon;
+          const isActive = activeTab === tItem.id;
           return (
             <button
               key={tItem.id}
@@ -294,19 +322,23 @@ export default function AdminPanel() {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
-                padding: '8px 16px',
-                borderRadius: 'var(--radius-md)',
+                gap: '5px',
+                padding: '7px 14px',
+                borderRadius: '9px',
                 border: 'none',
-                backgroundColor: activeTab === tItem.id ? 'var(--primary)' : 'transparent',
-                color: activeTab === tItem.id ? '#ffffff' : 'var(--text-main)',
-                fontWeight: 600,
+                background: isActive ? '#fff' : 'transparent',
+                color: isActive ? 'var(--primary-dark)' : 'var(--text-muted)',
+                fontWeight: isActive ? 700 : 500,
                 fontSize: '13px',
                 cursor: 'pointer',
-                whiteSpace: 'nowrap'
+                whiteSpace: 'nowrap',
+                boxShadow: isActive ? 'var(--shadow-sm)' : 'none',
+                transition: 'all 0.15s ease',
+                flex: '1 1 auto',
+                justifyContent: 'center',
               }}
             >
-              <Icon size={16} />
+              <Icon size={14} />
               <span>{tItem.label}</span>
             </button>
           );
@@ -339,52 +371,133 @@ export default function AdminPanel() {
       {/* TAB 2: OFFICIALS MANAGEMENT */}
       {activeTab === 'OFFICIALS' && (
         <div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '14px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+            <div>
+              <h3 style={{ fontSize: '16px', fontWeight: 800, margin: 0, color: 'var(--primary-dark)' }}>
+                Department Officers & Heads Directory
+              </h3>
+              <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>
+                Manage Level 0 (Field Officers) and Level 1 (Department Heads) across all municipal departments.
+              </p>
+            </div>
             <button onClick={() => setShowOfficialModal(true)} className="btn btn-sm btn-primary">
               <PlusCircle size={16} />
-              <span>Create Official Account</span>
+              <span>Create Official (L0 / L1)</span>
             </button>
           </div>
 
-          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
-              <thead style={{ backgroundColor: '#F1F5F9', borderBottom: '1px solid var(--border)' }}>
-                <tr>
-                  <th style={{ padding: '12px 16px' }}>Name</th>
-                  <th style={{ padding: '12px 16px' }}>Phone / Login ID</th>
-                  <th style={{ padding: '12px 16px' }}>Department</th>
-                  <th style={{ padding: '12px 16px' }}>Role / Level</th>
-                  <th style={{ padding: '12px 16px' }}>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {usersList.filter(u => u.role !== 'ROLE_CITIZEN').map((off) => (
-                  <tr key={off.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                    <td style={{ padding: '12px 16px', fontWeight: 600 }}>{off.name}</td>
-                    <td style={{ padding: '12px 16px' }}>{off.phone}</td>
-                    <td style={{ padding: '12px 16px' }}>{off.department?.name || 'All Administration'}</td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <span style={{
-                        padding: '2px 8px',
-                        borderRadius: '4px',
-                        backgroundColor: off.designationLevel === 1 ? '#FEF3C7' : '#EFF6FF',
-                        color: off.designationLevel === 1 ? '#B45309' : 'var(--primary)',
-                        fontSize: '11px',
-                        fontWeight: 700
-                      }}>
-                        {off.designationLevel === 1 ? 'Department Head (L1)' : off.role === 'ROLE_ADMIN' ? 'Super Admin' : 'Officer (L0)'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <span style={{ color: off.accountStatus === 'ACTIVE' ? '#166534' : '#991B1B', fontWeight: 600 }}>
-                        {off.accountStatus}
-                      </span>
-                    </td>
+          {usersList.filter(u => u.role !== 'ROLE_CITIZEN').length === 0 ? (
+            <div className="card" style={{ textAlign: 'center', padding: '40px 16px' }}>
+              <Users size={36} color="var(--primary)" style={{ margin: '0 auto 10px' }} />
+              <h4 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '6px' }}>No Department Officials Added Yet</h4>
+              <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px', maxWidth: '400px', margin: '0 auto 16px' }}>
+                All seeded demo officers have been removed. Tap the button below to add your municipal department officers (L0) and heads (L1) with your own custom passwords.
+              </p>
+              <button onClick={() => setShowOfficialModal(true)} className="btn btn-sm btn-primary">
+                <PlusCircle size={15} />
+                <span>Add First Officer</span>
+              </button>
+            </div>
+          ) : (
+            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
+                <thead style={{ backgroundColor: '#F1F5F9', borderBottom: '1px solid var(--border)' }}>
+                  <tr>
+                    <th style={{ padding: '12px 16px' }}>Name</th>
+                    <th style={{ padding: '12px 16px' }}>Phone / Login ID</th>
+                    <th style={{ padding: '12px 16px' }}>Department</th>
+                    <th style={{ padding: '12px 16px' }}>Role / Level</th>
+                    <th style={{ padding: '12px 16px' }}>Status</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'right' }}>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {usersList.filter(u => u.role !== 'ROLE_CITIZEN').map((off) => {
+                    const isSuperAdmin = off.role === 'ROLE_ADMIN';
+                    const isDeptHead = off.designationLevel === 1 || off.role === 'ROLE_DEPT_HEAD';
+                    return (
+                      <tr key={off.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                        <td style={{ padding: '12px 16px', fontWeight: 700, color: 'var(--text-main)' }}>
+                          {off.name}
+                        </td>
+                        <td style={{ padding: '12px 16px', fontFamily: 'monospace', fontWeight: 600 }}>
+                          {off.phone}
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <span style={{ fontWeight: 600, color: 'var(--primary-dark)' }}>
+                            {off.department?.name || 'All Municipal Administration'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <span style={{
+                            padding: '3px 10px',
+                            borderRadius: '9999px',
+                            backgroundColor: isSuperAdmin ? '#EDE9FE' : isDeptHead ? '#FEF3C7' : '#EFF6FF',
+                            color: isSuperAdmin ? '#6D28D9' : isDeptHead ? '#B45309' : '#1E56B8',
+                            fontSize: '11px',
+                            fontWeight: 800,
+                            display: 'inline-block'
+                          }}>
+                            {isSuperAdmin ? '👑 Super Admin' : isDeptHead ? '👔 Department Head (L1)' : '👷 Field Officer (L0)'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <span style={{
+                            color: off.accountStatus === 'ACTIVE' ? '#166534' : '#991B1B',
+                            backgroundColor: off.accountStatus === 'ACTIVE' ? '#DCFCE7' : '#FEE2E2',
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            fontSize: '11px',
+                            fontWeight: 700
+                          }}>
+                            {off.accountStatus}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                          {!isSuperAdmin && (
+                            <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                              <button
+                                onClick={() => handleToggleUserSuspension(off.id, off.accountStatus)}
+                                className="btn btn-xs btn-secondary"
+                                title={off.accountStatus === 'ACTIVE' ? 'Suspend Officer' : 'Activate Officer'}
+                                style={{ padding: '4px 8px', fontSize: '11px', height: '28px' }}
+                              >
+                                {off.accountStatus === 'ACTIVE' ? <Ban size={13} color="#DC2626" /> : <CheckCircle size={13} color="#166534" />}
+                                <span>{off.accountStatus === 'ACTIVE' ? 'Suspend' : 'Activate'}</span>
+                              </button>
+
+                              <button
+                                onClick={() => handleDeleteOfficial(off.id, off.name)}
+                                className="btn btn-xs"
+                                title="Delete Officer"
+                                style={{
+                                  padding: '4px 8px',
+                                  fontSize: '11px',
+                                  height: '28px',
+                                  backgroundColor: '#FEF2F2',
+                                  color: '#DC2626',
+                                  border: '1px solid #FECACA',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  fontWeight: 600
+                                }}
+                              >
+                                <Trash2 size={13} />
+                                <span>Delete</span>
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
@@ -525,12 +638,21 @@ export default function AdminPanel() {
       {/* Modal: Create Official */}
       {showOfficialModal && (
         <div className="modal-overlay">
-          <div className="modal-content" style={{ padding: '20px' }}>
-            <h3 style={{ fontSize: '17px', fontWeight: 700, marginBottom: '14px' }}>Create Department Official</h3>
+          <div className="modal-content" style={{ padding: '24px', maxWidth: '480px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>Add New Official</h3>
+              <button
+                type="button"
+                onClick={() => setShowOfficialModal(false)}
+                style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: 'var(--text-muted)' }}
+              >
+                &times;
+              </button>
+            </div>
 
             <form onSubmit={handleCreateOfficial}>
               <div className="form-group">
-                <label className="form-label">Official's Full Name</label>
+                <label className="form-label">Official's Full Name *</label>
                 <input
                   type="text"
                   className="form-input"
@@ -542,19 +664,35 @@ export default function AdminPanel() {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Phone Number (Login ID)</label>
+                <label className="form-label">Phone Number (Login ID) *</label>
                 <input
                   type="tel"
                   className="form-input"
                   required
-                  placeholder="e.g. 9888812345"
+                  placeholder="e.g. 9888812345 or +919888812345"
                   value={offPhone}
                   onChange={(e) => setOffPhone(e.target.value)}
                 />
               </div>
 
               <div className="form-group">
-                <label className="form-label">Department</label>
+                <label className="form-label">Assign Password *</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  required
+                  placeholder="Set login password (min 6 characters)"
+                  value={offPassword}
+                  onChange={(e) => setOffPassword(e.target.value)}
+                  minLength={6}
+                />
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px', display: 'block' }}>
+                  The official will log in using their Phone Number and this Password.
+                </span>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Department *</label>
                 <select
                   className="form-select"
                   value={offDeptId}
@@ -567,22 +705,29 @@ export default function AdminPanel() {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Designation Level</label>
+                <label className="form-label">Designation / Role Level *</label>
                 <select
                   className="form-select"
                   value={offLevel}
                   onChange={(e) => setOffLevel(e.target.value)}
                 >
-                  <option value="0">Officer / Inspector (Level 0)</option>
-                  <option value="1">Department Head / Superintending Engineer (Level 1 Escalation)</option>
+                  <option value="0">👷 Field Officer / Inspector (Level 0 - Resolves reports with photos)</option>
+                  <option value="1">👔 Department Head / Superintending Engineer (Level 1 - Escalations & Oversight)</option>
                 </select>
               </div>
 
-              <div style={{ backgroundColor: '#EFF6FF', padding: '10px', borderRadius: 'var(--radius-md)', fontSize: '12px', color: 'var(--primary-dark)', marginBottom: '14px' }}>
-                Default temporary password assigned: <strong>Warangal@123</strong> (Must change on first login).
+              <div style={{ marginBottom: '18px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-main)' }}>
+                  <input
+                    type="checkbox"
+                    checked={offMustChange}
+                    onChange={(e) => setOffMustChange(e.target.checked)}
+                  />
+                  Require officer to change password on first login
+                </label>
               </div>
 
-              <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
                 <button
                   type="button"
                   onClick={() => setShowOfficialModal(false)}
@@ -595,7 +740,7 @@ export default function AdminPanel() {
                   disabled={creatingOfficial}
                   className="btn btn-sm btn-primary"
                 >
-                  {creatingOfficial ? 'Creating...' : 'Create Official Account'}
+                  {creatingOfficial ? 'Creating Official...' : '✓ Create Official Account'}
                 </button>
               </div>
             </form>

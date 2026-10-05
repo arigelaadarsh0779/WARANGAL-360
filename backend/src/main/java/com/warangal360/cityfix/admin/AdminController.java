@@ -10,6 +10,7 @@ import com.warangal360.cityfix.common.BadRequestException;
 import com.warangal360.cityfix.common.ResourceNotFoundException;
 import com.warangal360.cityfix.department.Department;
 import com.warangal360.cityfix.department.DepartmentRepository;
+import com.warangal360.cityfix.report.ReportRepository;
 import com.warangal360.cityfix.sla.SlaEscalationScheduler;
 import com.warangal360.cityfix.sla.SlaSetting;
 import com.warangal360.cityfix.sla.SlaSettingRepository;
@@ -17,6 +18,7 @@ import com.warangal360.cityfix.user.AccountStatus;
 import com.warangal360.cityfix.user.Role;
 import com.warangal360.cityfix.user.User;
 import com.warangal360.cityfix.user.UserRepository;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -40,6 +42,8 @@ public class AdminController {
     private final PasswordEncoder passwordEncoder;
     private final AuditService auditService;
     private final SlaEscalationScheduler slaEscalationScheduler;
+    private final JdbcTemplate jdbcTemplate;
+    private final ReportRepository reportRepository;
 
     public AdminController(AnalyticsService analyticsService,
                            UserRepository userRepository,
@@ -48,7 +52,9 @@ public class AdminController {
                            AuditLogRepository auditLogRepository,
                            PasswordEncoder passwordEncoder,
                            AuditService auditService,
-                           SlaEscalationScheduler slaEscalationScheduler) {
+                           SlaEscalationScheduler slaEscalationScheduler,
+                           JdbcTemplate jdbcTemplate,
+                           ReportRepository reportRepository) {
         this.analyticsService = analyticsService;
         this.userRepository = userRepository;
         this.departmentRepository = departmentRepository;
@@ -57,6 +63,8 @@ public class AdminController {
         this.passwordEncoder = passwordEncoder;
         this.auditService = auditService;
         this.slaEscalationScheduler = slaEscalationScheduler;
+        this.jdbcTemplate = jdbcTemplate;
+        this.reportRepository = reportRepository;
     }
 
     @GetMapping("/analytics")
@@ -96,33 +104,74 @@ public class AdminController {
 
         String name = (String) body.get("name");
         String rawPhone = (String) body.get("phone");
-        String tempPassword = (String) body.getOrDefault("tempPassword", "Warangal@123");
+        String customPassword = (String) body.get("password");
+        String tempPassword = (String) body.get("tempPassword");
+        
+        String finalPassword = (customPassword != null && !customPassword.isBlank()) 
+                ? customPassword.trim() 
+                : (tempPassword != null && !tempPassword.isBlank() ? tempPassword.trim() : "Warangal@123");
+
+        if (finalPassword.length() < 6) {
+            throw new BadRequestException("Password must be at least 6 characters long.");
+        }
+
         Long departmentId = ((Number) body.get("departmentId")).longValue();
         Integer designationLevel = body.containsKey("designationLevel") ? ((Number) body.get("designationLevel")).intValue() : 0;
-        String roleStr = (String) body.getOrDefault("role", designationLevel == 1 ? "ROLE_DEPT_HEAD" : "ROLE_OFFICIAL");
+        String roleStr = designationLevel == 1 ? "ROLE_DEPT_HEAD" : "ROLE_OFFICIAL";
+        if (body.containsKey("role")) {
+            roleStr = (String) body.get("role");
+        }
 
         String phone = AuthService.normalizePhone(rawPhone);
         if (userRepository.existsByPhone(phone)) {
-            throw new BadRequestException("User with this phone number already exists.");
+            throw new BadRequestException("User with phone number " + phone + " already exists.");
         }
 
         Department dept = departmentRepository.findById(departmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Department not found"));
 
+        boolean mustChangePassword = body.containsKey("mustChangePassword") 
+                ? (Boolean) body.get("mustChangePassword") 
+                : false;
+
         User official = new User();
         official.setName(name);
         official.setPhone(phone);
-        official.setPassword(passwordEncoder.encode(tempPassword));
+        official.setPassword(passwordEncoder.encode(finalPassword));
         official.setRole(Role.valueOf(roleStr));
         official.setDepartment(dept);
         official.setDesignationLevel(designationLevel);
-        official.setMustChangePassword(true); // Mandatory password change at first login
+        official.setMustChangePassword(mustChangePassword);
         official.setAccountStatus(AccountStatus.ACTIVE);
         official.setCreatedAt(LocalDateTime.now());
 
         User saved = userRepository.save(official);
-        auditService.log(admin, "CREATE_OFFICIAL", "Official #" + saved.getId(), "Created " + roleStr + " for " + dept.getName());
+        auditService.log(admin, "CREATE_OFFICIAL", "Official #" + saved.getId(), "Created " + roleStr + " (L" + designationLevel + ") for " + dept.getName());
         return ResponseEntity.ok(ApiResponse.ok("Official created successfully", saved));
+    }
+
+    @DeleteMapping("/officials/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteOfficial(
+            @PathVariable Long id,
+            @AuthenticationPrincipal User admin) {
+        User official = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Official not found"));
+
+        if (official.getRole() != Role.ROLE_OFFICIAL && official.getRole() != Role.ROLE_DEPT_HEAD) {
+            throw new BadRequestException("Only department officials and heads can be deleted via this endpoint.");
+        }
+
+        // Reassign foreign keys to admin before deleting official
+        try {
+            jdbcTemplate.update("UPDATE audit_log SET actor_id = ? WHERE actor_id = ?", admin.getId(), id);
+            jdbcTemplate.update("UPDATE status_updates SET updated_by_id = ? WHERE updated_by_id = ?", admin.getId(), id);
+            jdbcTemplate.update("UPDATE escalation_log SET alerted_user_id = ? WHERE alerted_user_id = ?", admin.getId(), id);
+            jdbcTemplate.update("UPDATE notices SET author_id = ? WHERE author_id = ?", admin.getId(), id);
+        } catch (Exception ignored) {}
+
+        userRepository.delete(official);
+        auditService.log(admin, "DELETE_OFFICIAL", "Official #" + id, "Deleted " + official.getName() + " (" + official.getRole() + ")");
+        return ResponseEntity.ok(ApiResponse.ok("Official deleted successfully", null));
     }
 
     @GetMapping("/sla-settings")
@@ -156,5 +205,35 @@ public class AdminController {
     public ResponseEntity<ApiResponse<String>> triggerSlaCheck() {
         slaEscalationScheduler.runSlaChecker();
         return ResponseEntity.ok(ApiResponse.ok("SLA checker executed successfully", "OK"));
+    }
+
+    // Delete any report (including resolved) — Admin-only manual deletion
+    @DeleteMapping("/reports/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteReport(
+            @PathVariable Long id,
+            @AuthenticationPrincipal User admin) {
+        if (!reportRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Report not found");
+        }
+        try {
+            jdbcTemplate.update("DELETE FROM notifications WHERE report_id = ?", id);
+            jdbcTemplate.update("DELETE FROM escalation_log WHERE report_id = ?", id);
+            jdbcTemplate.update("DELETE FROM status_updates WHERE report_id = ?", id);
+            jdbcTemplate.update("DELETE FROM report_upvotes WHERE report_id = ?", id);
+            jdbcTemplate.update("UPDATE reports SET parent_report_id = NULL WHERE parent_report_id = ?", id);
+            reportRepository.deleteById(id);
+        } catch (Exception e) {
+            throw new BadRequestException("Could not delete report: " + e.getMessage());
+        }
+        auditService.log(admin, "DELETE_REPORT", "Report #" + id, "Manually deleted by admin");
+        return ResponseEntity.ok(ApiResponse.ok("Report deleted successfully", null));
+    }
+
+    // Get L0 field officers in a department — for L1 dept heads to see their team
+    @GetMapping("/dept-officers/{departmentId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'DEPT_HEAD')")
+    public ResponseEntity<ApiResponse<List<User>>> getDeptOfficers(@PathVariable Long departmentId) {
+        List<User> officers = userRepository.findByDepartmentIdAndDesignationLevel(departmentId, 0);
+        return ResponseEntity.ok(ApiResponse.ok(officers));
     }
 }

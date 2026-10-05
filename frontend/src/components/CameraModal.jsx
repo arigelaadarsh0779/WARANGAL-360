@@ -196,24 +196,28 @@ export default function CameraModal({ isOpen, onClose, onSubmitted }) {
   return (
     <div className="modal-overlay">
       <div className="modal-content" style={{ maxWidth: '600px', padding: '0', overflow: 'hidden' }}>
+        {/* Drag handle (mobile bottom sheet indicator) */}
+        <div className="modal-handle" />
         {/* Header */}
         <div style={{
-          backgroundColor: 'var(--primary-dark)',
-          color: '#ffffff',
-          padding: '14px 18px',
+          padding: '12px 18px 14px',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between'
+          justifyContent: 'space-between',
+          borderBottom: '1px solid var(--border-light)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Camera size={20} color="#93C5FD" />
-            <h3 style={{ fontSize: '16px', fontWeight: 700 }}>{t('captureTitle')}</h3>
+            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Camera size={17} color="#fff" />
+            </div>
+            <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-main)' }}>{t('captureTitle')}</h3>
           </div>
           <button
             onClick={onClose}
-            style={{ background: 'none', border: 'none', color: '#ffffff', cursor: 'pointer' }}
+            style={{ width: '32px', height: '32px', border: 'none', background: 'var(--surface-alt)', borderRadius: '8px', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            aria-label="Close"
           >
-            <X size={22} />
+            <X size={18} />
           </button>
         </div>
 

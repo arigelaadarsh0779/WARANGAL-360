@@ -62,4 +62,8 @@ public interface ReportRepository extends JpaRepository<Report, Long> {
 
     @Query("SELECT r FROM Report r WHERE r.escalationLevel >= 1 AND r.department.id = :departmentId AND r.status NOT IN ('RESOLVED', 'REJECTED') ORDER BY r.priorityScore DESC")
     List<Report> findEscalatedToDeptHead(@Param("departmentId") Long departmentId);
+
+    // Reports resolved more than N hours ago — for auto-cleanup
+    @Query("SELECT r FROM Report r WHERE r.status = 'RESOLVED' AND r.resolvedAt < :cutoff")
+    List<Report> findResolvedBefore(@Param("cutoff") LocalDateTime cutoff);
 }

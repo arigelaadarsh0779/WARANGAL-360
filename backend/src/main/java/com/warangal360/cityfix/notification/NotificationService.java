@@ -47,4 +47,19 @@ public class NotificationService {
             notificationRepository.save(n);
         });
     }
+
+    @Transactional
+    public void deleteNotification(Long id, Long requestingUserId) {
+        notificationRepository.findById(id).ifPresent(n -> {
+            // Only allow deletion of own notifications
+            if (n.getUser() != null && n.getUser().getId().equals(requestingUserId)) {
+                notificationRepository.delete(n);
+            }
+        });
+    }
+
+    @Transactional
+    public void clearAllNotifications(Long userId) {
+        notificationRepository.deleteAllByUserId(userId);
+    }
 }

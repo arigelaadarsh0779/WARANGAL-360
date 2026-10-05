@@ -38,6 +38,8 @@ export default function NotificationModal({ onClose }) {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '480px' }}>
+        {/* Drag handle */}
+        <div className="modal-handle" />
         {/* Header */}
         <div style={{
           padding: '14px 18px',

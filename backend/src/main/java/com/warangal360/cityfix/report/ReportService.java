@@ -240,10 +240,21 @@ public class ReportService {
                 null
         ));
 
-        // Send confirmation notification
+        // Send confirmation notification to citizen
         notificationService.send(currentUser, saved,
                 "Your problem is noted (#" + saved.getId() + "). We will fix it as fast as we can.",
                 "మీ సమస్య నమోదు చేయబడింది (#" + saved.getId() + "). మేము వీలైనంత త్వరగా పరిష్కరిస్తాము.");
+
+        // Notify all L0 & L1 officials in the routed department
+        if (dept != null) {
+            List<User> deptOfficials = userRepository.findByDepartmentId(dept.getId());
+            String emergencyPrefix = saved.getIsEmergency() ? "🚨 EMERGENCY! " : "";
+            String notifEn = emergencyPrefix + "New report #" + saved.getId() + " (" + saved.getCategory().name().replace("_", " ") + ") assigned to " + dept.getName() + " department. Priority: " + saved.getPriorityScore();
+            String notifTe = emergencyPrefix + "కొత్త ఫిర్యాదు #" + saved.getId() + " " + dept.getName() + " విభాగానికి అందించబడింది.";
+            for (User official : deptOfficials) {
+                notificationService.send(official, saved, notifEn, notifTe);
+            }
+        }
 
         return ReportSubmissionResult.created(saved);
     }

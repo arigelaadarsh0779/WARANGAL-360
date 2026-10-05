@@ -9,8 +9,9 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.StringJoiner;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -39,13 +40,34 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error("Access denied: You do not have permission to perform this action."));
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiResponse<Void>> handleIllegalArgument(IllegalArgumentException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(ex.getMessage()));
+    }
+
+    /**
+     * Handles @Valid annotation failures.
+     * Returns both a human-readable summary message AND a field-error map so the
+     * frontend can highlight exactly which fields are invalid.
+     */
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiResponse<Map<String, String>>> handleValidationExceptions(MethodArgumentNotValidException ex) {
-        Map<String, String> errors = new HashMap<>();
+    public ResponseEntity<ApiResponse<Map<String, String>>> handleValidationExceptions(
+            MethodArgumentNotValidException ex) {
+
+        // Collect field → error message pairs (preserving insertion order)
+        Map<String, String> fieldErrors = new LinkedHashMap<>();
         for (FieldError error : ex.getBindingResult().getFieldErrors()) {
-            errors.put(error.getField(), error.getDefaultMessage());
+            fieldErrors.putIfAbsent(error.getField(), error.getDefaultMessage());
         }
-        ApiResponse<Map<String, String>> response = new ApiResponse<>(false, "Validation failed", errors);
+
+        // Build a human-readable summary like:
+        //   "Please fix the following: name – Name must be between 2 and 50 characters; phone – Please enter a valid 10-digit Indian phone number"
+        StringJoiner joiner = new StringJoiner("; ");
+        fieldErrors.forEach((field, msg) -> joiner.add(field + " — " + msg));
+        String summary = "Please fix the following: " + joiner;
+
+        ApiResponse<Map<String, String>> response = new ApiResponse<>(false, summary, fieldErrors);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
@@ -53,6 +75,6 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleGeneralException(Exception ex) {
         ex.printStackTrace();
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error("An unexpected error occurred: " + ex.getMessage()));
+                .body(ApiResponse.error("An unexpected error occurred. Please try again."));
     }
 }

@@ -31,8 +31,26 @@ export async function apiRequest(endpoint, options = {}) {
 
     const data = await response.json();
     if (!response.ok || (data && data.success === false)) {
-      const errorMsg = (data && data.message) || `Request failed with status ${response.status}`;
-      throw new Error(errorMsg);
+      // Build a user-friendly error message.
+      // If the backend returned per-field validation errors (a map in data.data),
+      // format them as individual lines so the user knows exactly what to fix.
+      let errorMsg = (data && data.message) || `Request failed with status ${response.status}`;
+
+      const fieldErrors = (data && data.data && typeof data.data === 'object' && !Array.isArray(data.data))
+        ? data.data
+        : null;
+
+      if (fieldErrors && Object.keys(fieldErrors).length > 0) {
+        // Format: "• phone — invalid number\n• name — too short"
+        const lines = Object.entries(fieldErrors)
+          .map(([field, msg]) => `• ${field}: ${msg}`)
+          .join('\n');
+        errorMsg = lines;
+      }
+
+      const err = new Error(errorMsg);
+      err.fieldErrors = fieldErrors; // expose for per-field UI highlighting
+      throw err;
     }
 
     return data.data !== undefined ? data.data : data;
@@ -139,6 +157,12 @@ export const api = {
   markAllNotificationsRead: () =>
     apiRequest('/api/notifications/mark-all-read', { method: 'POST' }),
 
+  deleteNotification: (id) =>
+    apiRequest(`/api/notifications/${id}`, { method: 'DELETE' }),
+
+  clearAllNotifications: () =>
+    apiRequest('/api/notifications/clear-all', { method: 'DELETE' }),
+
   // Admin
   getAdminAnalytics: () => apiRequest('/api/admin/analytics'),
 
@@ -155,6 +179,17 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(officialData),
     }),
+
+  deleteOfficial: (id) =>
+    apiRequest(`/api/admin/officials/${id}`, {
+      method: 'DELETE',
+    }),
+
+  deleteReport: (id) =>
+    apiRequest(`/api/admin/reports/${id}`, { method: 'DELETE' }),
+
+  getDeptOfficers: (departmentId) =>
+    apiRequest(`/api/admin/dept-officers/${departmentId}`),
 
   getSlaSettings: () => apiRequest('/api/admin/sla-settings'),
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Clock, CheckCircle2, AlertTriangle, RefreshCw, XCircle, Camera, PauseCircle, PlayCircle, Eye, Wrench, Layers } from 'lucide-react';
+import { Clock, CheckCircle2, AlertTriangle, RefreshCw, XCircle, Camera, PauseCircle, PlayCircle, Eye, Wrench, Layers, Bell, BellOff, Trash2 } from 'lucide-react';
 import StatusBadge from '../components/StatusBadge';
 import PriorityTag from '../components/PriorityTag';
 import { api } from '../services/api';
@@ -11,7 +11,9 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 export default function OfficialDashboard() {
   const { user, t } = useAuth();
   const [reports, setReports] = useState([]);
+  const [notifications, setNotifications] = useState([]);
   const [filterStatus, setFilterStatus] = useState('ALL');
+  const [activeTab, setActiveTab] = useState('QUEUE'); // 'QUEUE' | 'NOTIFS'
   const [loading, setLoading] = useState(true);
 
   // Status Action Modal
@@ -33,11 +35,18 @@ export default function OfficialDashboard() {
   }, [user]);
 
   const loadDepartmentReports = async () => {
-    if (!user?.departmentId) return;
+    if (!user?.departmentId) {
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
-      const res = await api.getDepartmentReports(user.departmentId);
+      const [res, notifsRes] = await Promise.all([
+        api.getDepartmentReports(user.departmentId).catch(() => []),
+        api.getMyNotifications().catch(() => []),
+      ]);
       setReports(res || []);
+      setNotifications(notifsRes || []);
     } catch {
       // ignore
     } finally {
@@ -120,16 +129,12 @@ export default function OfficialDashboard() {
     }
   };
 
-  const filtered = reports.filter((r) => {
-    if (filterStatus === 'ALL') return true;
-    if (filterStatus === 'OVERDUE') return r.escalationLevel && r.escalationLevel >= 1;
-    return r.status === filterStatus;
-  });
 
   const getFullImageUrl = (url) => {
     if (!url) return '';
     if (url.startsWith('http')) return url;
-    return `${API_BASE_URL}${url}`;
+    const path = url.startsWith('/') ? url : `/uploads/${url}`;
+    return `${API_BASE_URL}${path}`;
   };
 
   // Summary Metrics
@@ -137,6 +142,21 @@ export default function OfficialDashboard() {
   const inProgressCount = reports.filter(r => r.status === 'IN_PROGRESS' || r.status === 'ACKNOWLEDGED').length;
   const overdueCount = reports.filter(r => r.escalationLevel && r.escalationLevel >= 1 && r.status !== 'RESOLVED' && r.status !== 'REJECTED').length;
   const resolvedCount = reports.filter(r => r.status === 'RESOLVED').length;
+  const unreadNotifCount = notifications.filter(n => !n.isRead).length;
+
+  // Sort: emergency/overdue first, then by priority score descending
+  const sortedReports = [...reports].sort((a, b) => {
+    const aUrgent = a.isEmergency || (a.escalationLevel >= 1);
+    const bUrgent = b.isEmergency || (b.escalationLevel >= 1);
+    if (aUrgent && !bUrgent) return -1;
+    if (!aUrgent && bUrgent) return 1;
+    return (b.priorityScore || 0) - (a.priorityScore || 0);
+  });
+
+  // Filter list
+  const filtered = filterStatus === 'ALL' ? sortedReports
+    : filterStatus === 'OVERDUE' ? sortedReports.filter(r => r.escalationLevel >= 1 && r.status !== 'RESOLVED' && r.status !== 'REJECTED')
+    : sortedReports.filter(r => r.status === filterStatus);
 
   return (
     <div>
@@ -178,7 +198,74 @@ export default function OfficialDashboard() {
         </div>
       </div>
 
-      {/* Filter Tabs */}
+      {/* Top Tab Bar: Queue | Notifications */}
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+        <button
+          onClick={() => setActiveTab('QUEUE')}
+          style={{ padding: '7px 14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', backgroundColor: activeTab === 'QUEUE' ? 'var(--primary)' : '#fff', color: activeTab === 'QUEUE' ? '#fff' : 'var(--text-main)', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}
+        >
+          📋 My Queue
+        </button>
+        <button
+          onClick={() => setActiveTab('NOTIFS')}
+          style={{ padding: '7px 14px', borderRadius: 'var(--radius-md)', border: `1px solid ${unreadNotifCount > 0 ? '#F59E0B' : 'var(--border)'}`, backgroundColor: activeTab === 'NOTIFS' ? '#F59E0B' : '#fff', color: activeTab === 'NOTIFS' ? '#fff' : 'var(--text-main)', fontSize: '13px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+        >
+          <Bell size={14} />
+          Notifications
+          {unreadNotifCount > 0 && <span style={{ background: '#DC2626', color: '#fff', borderRadius: '9999px', padding: '1px 6px', fontSize: '11px' }}>{unreadNotifCount}</span>}
+        </button>
+        <button
+          onClick={loadDepartmentReports}
+          style={{ padding: '7px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', background: '#fff', cursor: 'pointer', color: 'var(--primary)' }}
+          title="Refresh"
+        >
+          <RefreshCw size={14} />
+        </button>
+      </div>
+
+      {/* Notifications Panel */}
+      {activeTab === 'NOTIFS' && (
+        <div>
+          {notifications.length > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '10px' }}>
+              <button
+                onClick={async () => { try { await api.clearAllNotifications(); setNotifications([]); } catch {} }}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '8px', border: '1px solid #DC2626', background: '#fff', color: '#DC2626', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+              >
+                <Trash2 size={13} /> Clear All
+              </button>
+            </div>
+          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {notifications.length === 0 ? (
+              <div className="card" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                <BellOff size={36} style={{ marginBottom: '10px', opacity: 0.3 }} />
+                <p style={{ margin: 0 }}>No notifications yet.</p>
+              </div>
+            ) : notifications.map(n => (
+              <div key={n.id} className="card" style={{
+                padding: '12px 14px', display: 'flex', alignItems: 'flex-start', gap: '10px',
+                backgroundColor: n.isRead ? '#fff' : '#EFF6FF',
+                borderLeft: `3px solid ${n.isRead ? 'var(--border)' : 'var(--primary)'}`,
+              }}>
+                <Bell size={15} style={{ flexShrink: 0, marginTop: '2px', color: n.isRead ? 'var(--text-muted)' : 'var(--primary)' }} />
+                <div style={{ flex: 1 }}>
+                  <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-main)', lineHeight: 1.4 }}>{n.messageEn}</p>
+                  <p style={{ margin: '4px 0 0', fontSize: '11px', color: 'var(--text-muted)' }}>{n.createdAt ? new Date(n.createdAt).toLocaleString('en-IN') : ''}</p>
+                </div>
+                <button
+                  onClick={async () => { try { await api.deleteNotification(n.id); setNotifications(prev => prev.filter(x => x.id !== n.id)); } catch {} }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px', flexShrink: 0 }}
+                ><Trash2 size={13} /></button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Queue: Filter tabs + Cards */}
+      {activeTab === 'QUEUE' && (
+        <div>
       <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', overflowX: 'auto' }}>
         {['ALL', 'OVERDUE', 'SUBMITTED', 'ACKNOWLEDGED', 'IN_PROGRESS', 'RESOLVED'].map((st) => (
           <button
@@ -219,11 +306,16 @@ export default function OfficialDashboard() {
                 key={r.id}
                 className="card card-hover"
                 style={{
-                  backgroundColor: isOverdue ? '#FFF5F5' : '#ffffff',
-                  border: isOverdue ? '1.5px solid #FCA5A5' : '1px solid var(--border)',
+                  backgroundColor: r.isEmergency ? '#FFF5F5' : (isOverdue ? '#FFF5F5' : '#ffffff'),
+                  border: r.isEmergency ? '2px solid #DC2626' : (isOverdue ? '1.5px solid #FCA5A5' : '1px solid var(--border)'),
                   padding: '16px'
                 }}
               >
+                {r.isEmergency && (
+                  <div style={{ background: '#DC2626', color: '#fff', borderRadius: '6px', padding: '4px 10px', fontSize: '12px', fontWeight: 700, marginBottom: '10px' }}>
+                    🚨 EMERGENCY — Immediate Action Required
+                  </div>
+                )}
                 <div style={{ display: 'flex', gap: '14px' }}>
                   {/* Thumbnail */}
                   <div style={{
@@ -339,6 +431,8 @@ export default function OfficialDashboard() {
             );
           })}
         </div>
+      )}
+      </div>
       )}
 
       {/* Action Status Update Modal */}

@@ -35,7 +35,9 @@ export default function ReportCard({ report, onUpvoted }) {
   const getFullImageUrl = (url) => {
     if (!url) return '';
     if (url.startsWith('http')) return url;
-    return `${API_BASE_URL}${url}`;
+    // Ensure path always starts with /uploads/ (handles legacy bare filenames)
+    const path = url.startsWith('/') ? url : `/uploads/${url}`;
+    return `${API_BASE_URL}${path}`;
   };
 
   const formattedDate = report.createdAt
