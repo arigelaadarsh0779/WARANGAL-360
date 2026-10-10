@@ -58,4 +58,11 @@ public class NoticeController {
         Notice notice = noticeService.createNotice(author, request);
         return ResponseEntity.ok(ApiResponse.ok("Notice published successfully", notice));
     }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('DEPT_HEAD', 'ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> deleteNotice(@PathVariable Long id) {
+        noticeService.deleteNotice(id);
+        return ResponseEntity.ok(ApiResponse.ok("Notice deleted successfully", null));
+    }
 }

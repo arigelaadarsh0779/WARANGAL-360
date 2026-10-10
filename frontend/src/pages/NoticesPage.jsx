@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Zap, ShieldAlert, MapPin, Calendar, PlusCircle, Sparkles } from 'lucide-react';
+import { Zap, ShieldAlert, MapPin, Calendar, PlusCircle, Sparkles, Trash2 } from 'lucide-react';
 import { api } from '../services/api';
 
 export default function NoticesPage() {
@@ -79,6 +79,16 @@ export default function NoticesPage() {
       alert(err.message || "Failed to publish notice");
     } finally {
       setPublishing(false);
+    }
+  };
+
+  const handleDeleteNotice = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this notice?")) return;
+    try {
+      await api.deleteNotice(id);
+      setNotices(notices.filter(n => n.id !== id));
+    } catch (err) {
+      alert("Failed to delete notice: " + err.message);
     }
   };
 
@@ -178,16 +188,35 @@ export default function NoticesPage() {
                     )}
                   </div>
 
-                  <span style={{
-                    fontSize: '11px',
-                    fontWeight: 600,
-                    padding: '2px 6px',
-                    borderRadius: '4px',
-                    backgroundColor: notice.status === 'ACTIVE' ? '#DCFCE7' : '#F3F4F6',
-                    color: notice.status === 'ACTIVE' ? '#166534' : '#6B7280'
-                  }}>
-                    {notice.status}
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      padding: '2px 6px',
+                      borderRadius: '4px',
+                      backgroundColor: notice.status === 'ACTIVE' ? '#DCFCE7' : '#F3F4F6',
+                      color: notice.status === 'ACTIVE' ? '#166534' : '#6B7280'
+                    }}>
+                      {notice.status}
+                    </span>
+                    {(isAdmin || isDeptHead) && (
+                      <button
+                        onClick={() => handleDeleteNotice(notice.id)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#EF4444',
+                          cursor: 'pointer',
+                          padding: '2px',
+                          display: 'flex',
+                          alignItems: 'center'
+                        }}
+                        title="Delete Notice"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-main)', marginBottom: '6px' }}>

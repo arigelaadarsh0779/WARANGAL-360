@@ -84,19 +84,19 @@ img { display: block; max-width: 100%; }
 
 .main-content {
   flex: 1;
-  max-width: 720px;
+  max-width: 100%;
   width: 100%;
   margin: 0 auto;
-  padding: 16px 14px;
-  padding-top: calc(var(--navbar-height) + 16px);
+  padding: 12px;
+  padding-top: calc(var(--navbar-height) + 12px);
   padding-bottom: calc(var(--bottom-nav-height) + 16px);
 }
 
 @media (min-width: 768px) {
   .main-content {
-    max-width: 900px;
-    padding: 24px 24px;
-    padding-top: calc(var(--navbar-height) + 24px);
+    max-width: 1240px;
+    padding: 20px 24px;
+    padding-top: calc(var(--navbar-height) + 20px);
     padding-bottom: 40px;
   }
 }
@@ -462,7 +462,12 @@ img { display: block; max-width: 100%; }
   margin: 12px auto 0;
 }
 
+/* ── Transitions & Keyframe Animations ────────────── */
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 @keyframes slideUp { from { transform: translateY(60px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 @keyframes scaleIn { from { transform: scale(0.94); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
@@ -470,6 +475,46 @@ img { display: block; max-width: 100%; }
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
+}
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 15px rgba(56, 189, 248, 0.35); }
+  50% { box-shadow: 0 0 30px rgba(56, 189, 248, 0.7); }
+}
+@keyframes floatSlow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.page-enter {
+  animation: fadeInUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.card-hover {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease !important;
+}
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(11, 42, 91, 0.12) !important;
+}
+
+.btn {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.btn:hover {
+  transform: translateY(-2px);
+}
+.btn:active {
+  transform: scale(0.97);
+}
+
+.img-zoom-container {
+  overflow: hidden;
+}
+.img-zoom-container img {
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.img-zoom-container:hover img {
+  transform: scale(1.07);
 }
 
 /* ── Leaflet ──────────────────────────────────── */

@@ -20,13 +20,26 @@ export default function Navbar({ onOpenReport }) {
       <div className="navbar-inner">
 
         {/* Brand */}
-        <Link to="/" className="nav-brand">
-          <div className="nav-brand-icon">
-            <MapPin size={17} color="#fff" strokeWidth={2.5} />
-          </div>
+        <Link to="/" className="nav-brand" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
+          <img
+            src="/images/warangal_logo.jpg"
+            alt="Warangal 360 Logo"
+            style={{
+              width: '38px',
+              height: '38px',
+              borderRadius: '10px',
+              objectFit: 'cover',
+              border: '1.5px solid rgba(56, 189, 248, 0.6)',
+              boxShadow: '0 0 10px rgba(30, 86, 184, 0.4)',
+            }}
+          />
           <div className="nav-brand-text">
-            <div className="nav-brand-title">{t('appName')}</div>
-            <div className="nav-brand-sub">Warangal Civic Care</div>
+            <div className="nav-brand-title" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span>WARANGAL 360</span>
+            </div>
+            <div className="nav-brand-sub" style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 600 }}>
+              GWMC Smart City Portal
+            </div>
           </div>
         </Link>
 

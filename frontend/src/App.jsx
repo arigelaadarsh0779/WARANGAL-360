@@ -4,7 +4,8 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import BottomNav from './components/BottomNav';
 import CameraModal from './components/CameraModal';
-import { Camera, LogIn, X } from 'lucide-react';
+import { Camera, LogIn, X, AlertTriangle } from 'lucide-react';
+import { api } from './services/api';
 
 // Pages
 import Home from './pages/Home';
@@ -44,11 +45,60 @@ function MainLayout() {
     }
   };
 
+  const [emergencyNotices, setEmergencyNotices] = useState([]);
+
+  React.useEffect(() => {
+    // Poll for active emergency notices
+    const fetchNotices = async () => {
+      try {
+        const notices = await api.getActiveNotices();
+        if (notices) {
+          setEmergencyNotices(notices.filter(n => n.type === 'EMERGENCY'));
+        }
+      } catch (err) {
+        // ignore
+      }
+    };
+    fetchNotices();
+    const interval = setInterval(fetchNotices, 60000); // Check every minute
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div className="app-container">
+      {emergencyNotices.length > 0 && (
+        <div style={{
+          backgroundColor: '#DC2626',
+          color: 'white',
+          padding: '12px 16px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '4px',
+          boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+          zIndex: 9999,
+          position: 'sticky',
+          top: 0
+        }}>
+          {emergencyNotices.map(notice => (
+            <div key={notice.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+              <AlertTriangle size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 700, fontSize: '14px' }}>EMERGENCY: {notice.title}</div>
+                <div style={{ fontSize: '13px', opacity: 0.9 }}>{notice.messageEn}</div>
+              </div>
+              <button 
+                onClick={() => setEmergencyNotices(prev => prev.filter(n => n.id !== notice.id))}
+                style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', opacity: 0.8 }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
       <Navbar onOpenReport={handleOpenReport} />
 
-      <main className="main-content">
+      <main className="main-content page-enter">
         <Routes>
           <Route path="/" element={<Home onOpenReport={handleOpenReport} />} />
           <Route path="/login" element={<Login />} />

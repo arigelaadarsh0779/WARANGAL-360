@@ -66,13 +66,38 @@ export default function EmergencyContacts() {
 
   return (
     <div style={{ maxWidth: '720px', margin: '0 auto' }}>
-      <div style={{ marginBottom: '16px' }}>
-        <h2 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--primary-dark)', margin: 0 }}>
-          {t('navContacts')} & Civic Directory
-        </h2>
-        <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>
-          Official contacts and municipal departments for Greater Warangal
-        </p>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '14px',
+        marginBottom: '18px',
+        backgroundColor: '#ffffff',
+        borderRadius: '16px',
+        padding: '14px 18px',
+        border: '1px solid var(--border)',
+        boxShadow: 'var(--shadow-sm)'
+      }}>
+        <img
+          src="/images/warangal_logo.jpg"
+          alt="Warangal 360 Emblem"
+          style={{
+            width: '48px',
+            height: '48px',
+            borderRadius: '12px',
+            objectFit: 'cover',
+            border: '1.5px solid rgba(56, 189, 248, 0.7)',
+            boxShadow: '0 4px 14px rgba(30, 86, 184, 0.3)',
+            flexShrink: 0
+          }}
+        />
+        <div>
+          <h2 style={{ fontSize: '18px', fontWeight: 900, color: 'var(--primary-dark)', margin: 0 }}>
+            {t('navContacts')} & Civic Directory
+          </h2>
+          <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '2px 0 0' }}>
+            Greater Warangal Municipal Corporation (GWMC) • 24x7 Citizen Assistance
+          </p>
+        </div>
       </div>
 
       {/* Directory Tabs */}

@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { MapPin, ThumbsUp, ArrowLeft, Clock, ShieldCheck, Wrench, Layers, AlertTriangle, RefreshCw, CheckCircle } from 'lucide-react';
+import { MapPin, ThumbsUp, ArrowLeft, Clock, ShieldCheck, Wrench, Layers, AlertTriangle, RefreshCw, CheckCircle, Trash2 } from 'lucide-react';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import StatusBadge from '../components/StatusBadge';
 import PriorityTag from '../components/PriorityTag';
 import StatusTimeline from '../components/StatusTimeline';
@@ -19,6 +22,7 @@ export default function ReportDetail() {
   const [loading, setLoading] = useState(true);
   const [upvotes, setUpvotes] = useState(0);
   const [isUpvoted, setIsUpvoted] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Reopen flow state
   const [showReopenModal, setShowReopenModal] = useState(false);
@@ -55,6 +59,21 @@ export default function ReportDetail() {
       }
     } catch {
       // ignore
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!window.confirm(`⚠️ Are you sure you want to permanently delete Problem #${id}?\n\nThis will completely remove it from the system, including all logs and media.`)) {
+      return;
+    }
+    setDeleting(true);
+    try {
+      await api.deleteReport(id);
+      alert(`✓ Problem #${id} deleted successfully.`);
+      navigate('/'); // Go to home after deletion since it could be an admin or citizen
+    } catch (err) {
+      alert("Failed to delete problem: " + (err.message || 'Error'));
+      setDeleting(false);
     }
   };
 
@@ -100,23 +119,59 @@ export default function ReportDetail() {
 
   return (
     <div style={{ maxWidth: '760px', margin: '0 auto' }}>
-      {/* Back button */}
-      <button
-        onClick={() => navigate(-1)}
-        className="btn btn-sm"
-        style={{
-          background: 'none',
-          border: 'none',
-          color: 'var(--primary)',
-          padding: '0 0 12px 0',
-          fontSize: '14px',
-          fontWeight: 600,
-          cursor: 'pointer'
-        }}
-      >
-        <ArrowLeft size={16} />
-        <span>Back</span>
-      </button>
+      {/* Top Navigation & Admin Actions */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+        <button
+          onClick={() => navigate(-1)}
+          className="btn btn-sm"
+          style={{
+            background: 'none',
+            border: 'none',
+            color: 'var(--primary)',
+            padding: '0',
+            fontSize: '14px',
+            fontWeight: 600,
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px'
+          }}
+        >
+          <ArrowLeft size={16} />
+          <span>Back</span>
+        </button>
+
+        {user && (user.role === 'ROLE_ADMIN' || isMyReport) && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {user.role === 'ROLE_ADMIN' && (
+              <span style={{ fontSize: '11px', background: '#0B2A5B', color: '#fff', padding: '3px 8px', borderRadius: '4px', fontWeight: 700 }}>
+                SUPER ADMIN
+              </span>
+            )}
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="btn btn-sm btn-danger"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 12px',
+                fontSize: '12px',
+                fontWeight: 700,
+                backgroundColor: '#DC2626',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer'
+              }}
+            >
+              <Trash2 size={14} />
+              <span>{deleting ? 'Deleting...' : 'Delete Problem'}</span>
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* Main Detail Card */}
       <div className="card" style={{ padding: '0', overflow: 'hidden', marginBottom: '20px' }}>
@@ -179,7 +234,29 @@ export default function ReportDetail() {
           <div className="grid-2" style={{ marginBottom: '16px' }}>
             <div style={{ padding: '12px', backgroundColor: '#F1F5F9', borderRadius: 'var(--radius-md)', fontSize: '13px' }}>
               <div style={{ fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>Address / Location</div>
-              <div style={{ color: 'var(--text-main)', fontWeight: 500 }}>{report.address || 'Warangal Locality'}</div>
+              <div style={{ color: 'var(--text-main)', fontWeight: 500, marginBottom: '8px' }}>{report.address || 'Warangal Locality'}</div>
+              {report.latitude && report.longitude && (
+                <div style={{ height: '120px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                  <MapContainer 
+                    center={[report.latitude, report.longitude]} 
+                    zoom={15} 
+                    style={{ height: '100%', width: '100%' }}
+                    zoomControl={false}
+                    dragging={false}
+                  >
+                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                    <Marker 
+                      position={[report.latitude, report.longitude]} 
+                      icon={L.divIcon({
+                        className: 'custom-pin',
+                        html: `<div style="background: #DC2626; width: 24px; height: 24px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>`,
+                        iconSize: [24, 24],
+                        iconAnchor: [12, 24]
+                      })} 
+                    />
+                  </MapContainer>
+                </div>
+              )}
             </div>
 
             <div style={{ padding: '12px', backgroundColor: '#EFF6FF', borderRadius: 'var(--radius-md)', fontSize: '13px' }}>
@@ -233,21 +310,37 @@ export default function ReportDetail() {
             </div>
           )}
 
-          {/* Actions: Upvote & Reopen Feedback */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '12px', borderTop: '1px solid var(--border)' }}>
-            <button
-              onClick={handleUpvote}
-              className="btn btn-sm btn-secondary"
-            >
-              <ThumbsUp size={14} fill={isUpvoted ? 'currentColor' : 'none'} />
-              <span>{upvotes} {t('upvotes')}</span>
-            </button>
+          {/* Actions: Upvote & Reopen Feedback & Admin Controls */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '12px', borderTop: '1px solid var(--border)', flexWrap: 'wrap', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button
+                onClick={handleUpvote}
+                className="btn btn-sm btn-secondary"
+              >
+                <ThumbsUp size={14} fill={isUpvoted ? 'currentColor' : 'none'} />
+                <span>{upvotes} {t('upvotes')}</span>
+              </button>
 
-            {report.reportCount > 1 && (
-              <span style={{ fontSize: '12px', color: 'var(--primary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Layers size={14} />
-                <span>{report.reportCount} {t('reportCount')}</span>
-              </span>
+              {report.reportCount > 1 && (
+                <span style={{ fontSize: '12px', color: 'var(--primary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Layers size={14} />
+                  <span>{report.reportCount} {t('reportCount')}</span>
+                </span>
+              )}
+            </div>
+
+            {/* Admin Delete Problem Button */}
+            {user?.role === 'ROLE_ADMIN' && (
+              <button
+                onClick={handleAdminDelete}
+                disabled={deleting}
+                className="btn btn-sm btn-danger"
+                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                title="Permanently remove this problem from the database"
+              >
+                <Trash2 size={14} />
+                <span>{deleting ? 'Deleting...' : 'Delete Problem (Admin)'}</span>
+              </button>
             )}
           </div>
         </div>

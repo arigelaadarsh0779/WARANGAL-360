@@ -3,6 +3,7 @@ package com.warangal360.cityfix.ai;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.warangal360.cityfix.report.Category;
+import com.warangal360.cityfix.verification.ImageVerificationService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpEntity;
@@ -29,13 +30,15 @@ public class AiAnalysisService {
 
     private final ObjectMapper objectMapper;
     private final RestTemplate restTemplate;
+    private final ImageVerificationService imageVerificationService;
     private final Map<String, AiAnalysisResult> resultCache = new ConcurrentHashMap<>();
 
     private String visionPromptTemplate;
     private String translationPromptTemplate;
 
-    public AiAnalysisService(ObjectMapper objectMapper) {
+    public AiAnalysisService(ObjectMapper objectMapper, ImageVerificationService imageVerificationService) {
         this.objectMapper = objectMapper;
+        this.imageVerificationService = imageVerificationService;
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(10000);
         factory.setReadTimeout(15000);
@@ -69,6 +72,22 @@ public class AiAnalysisService {
             return resultCache.get(fileHash);
         }
 
+        // 1. Programmatic Image Quality Pre-Check (Reject pitch black, covered lens, blank photos)
+        if (file != null && !file.isEmpty()) {
+            ImageVerificationService.ImageQualityResult quality = imageVerificationService.evaluateImageQuality(file);
+            if (!quality.isValid()) {
+                AiAnalysisResult rejected = new AiAnalysisResult();
+                rejected.setCivicIssue(false);
+                rejected.setRejectionReason(quality.getRejectionReason());
+                rejected.setCategory(Category.OTHER);
+                rejected.setSeverity(1);
+                rejected.setSummaryEn("Rejected: Dark or unreadable image");
+                if (fileHash != null) resultCache.put(fileHash, rejected);
+                return rejected;
+            }
+        }
+
+        // 2. Deep AI Vision Analysis via Gemini
         if (geminiApiKey != null && !geminiApiKey.isBlank()) {
             try {
                 AiAnalysisResult result = callGeminiVision(file, description);
@@ -81,6 +100,7 @@ public class AiAnalysisService {
             }
         }
 
+        // 3. Smart Heuristic Fallback
         AiAnalysisResult fallback = buildSmartHeuristicResult(description);
         if (fileHash != null) resultCache.put(fileHash, fallback);
         return fallback;
@@ -216,7 +236,7 @@ public class AiAnalysisService {
             res.setEmergency(true);
             res.setSummaryEn("Exposed electrical wire hazard threatening pedestrian safety");
             res.setAiCrewEstimate("2 certified linemen + 1 electrical inspection van");
-        } else if (text.contains("light") || text.contains("dark") || text.contains("pole") || text.contains("లైటు")) {
+        } else if (text.contains("light") || text.contains("pole") || text.contains("లైటు")) {
             res.setCategory(Category.STREETLIGHT);
             res.setDepartment("Electricity");
             res.setSeverity(2);
@@ -241,11 +261,22 @@ public class AiAnalysisService {
             res.setSummaryEn("Fallen tree branch blocking public passageway");
             res.setAiCrewEstimate("3 emergency crew + chainsaw & transport truck");
         } else {
-            res.setCategory(Category.OTHER);
-            res.setDepartment("Sanitation");
-            res.setSeverity(3);
-            res.setSummaryEn(description != null && !description.isBlank() ? description : "Civic issue reported in Warangal locality");
-            res.setAiCrewEstimate("2 civic field staff for on-site assessment");
+            // NO civic keyword found — reject if description is also empty/generic
+            // This prevents black/random photos with no description from being auto-approved
+            if (description == null || description.isBlank() || description.trim().length() < 10) {
+                res.setCivicIssue(false);
+                res.setRejectionReason("Could not identify a valid civic issue from the photo or description. Please add a clear description of the problem (e.g., 'pothole on main road', 'garbage pile near school').");
+                res.setCategory(Category.OTHER);
+                res.setSeverity(1);
+                res.setSummaryEn("Rejected: No identifiable civic issue");
+                res.setAiCrewEstimate("N/A");
+            } else {
+                res.setCategory(Category.OTHER);
+                res.setDepartment("Sanitation");
+                res.setSeverity(3);
+                res.setSummaryEn(description);
+                res.setAiCrewEstimate("2 civic field staff for on-site assessment");
+            }
         }
         return res;
     }

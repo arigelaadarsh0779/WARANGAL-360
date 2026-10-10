@@ -97,34 +97,103 @@ export default function Login() {
 
   return (
     <div style={{
-      minHeight: 'calc(100vh - var(--navbar-height))',
+      minHeight: 'calc(100vh - var(--navbar-height) - 40px)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '16px',
+      padding: '12px 0',
+      width: '100%'
     }}>
-      <div style={{ width: '100%', maxWidth: '420px' }}>
+      <div style={{
+        width: '100%',
+        maxWidth: '960px',
+        backgroundColor: '#ffffff',
+        borderRadius: '24px',
+        overflow: 'hidden',
+        boxShadow: '0 16px 48px rgba(11, 42, 91, 0.16)',
+        border: '1px solid var(--border)',
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+      }}>
 
-        {/* Brand Header */}
-        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-          <div style={{
-            width: '62px', height: '62px',
-            background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%)',
-            borderRadius: '18px',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            margin: '0 auto 14px',
-            boxShadow: '0 8px 24px rgba(30,86,184,0.35)',
-          }}>
-            <MapPin size={30} color="#fff" strokeWidth={2} />
+        {/* ── Left Side: Warangal Civic Showcase ── */}
+        <div style={{
+          backgroundImage: `linear-gradient(135deg, rgba(11, 42, 91, 0.94) 0%, rgba(30, 86, 184, 0.88) 60%, rgba(15, 23, 42, 0.96) 100%), url('/images/warangal_hero.jpg')`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          padding: '36px 28px',
+          color: '#ffffff',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          position: 'relative',
+          minHeight: '380px'
+        }}>
+          <div>
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: '6px',
+              background: 'rgba(255, 255, 255, 0.16)',
+              backdropFilter: 'blur(6px)',
+              borderRadius: '100px', padding: '4px 12px',
+              fontSize: '11px', fontWeight: 800,
+              textTransform: 'uppercase', letterSpacing: '0.04em',
+              marginBottom: '20px', border: '1px solid rgba(255, 255, 255, 0.25)'
+            }}>
+              GWMC Smart City Portal
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '16px' }}>
+              <img
+                src="/images/warangal_logo.jpg"
+                alt="Warangal 360 Emblem"
+                style={{
+                  width: '68px',
+                  height: '68px',
+                  borderRadius: '16px',
+                  objectFit: 'cover',
+                  border: '2px solid rgba(56, 189, 248, 0.8)',
+                  boxShadow: '0 0 20px rgba(56, 189, 248, 0.5)',
+                  flexShrink: 0
+                }}
+              />
+              <div>
+                <h1 style={{ fontSize: '26px', fontWeight: 900, margin: 0, letterSpacing: '-0.3px', lineHeight: 1.1 }}>
+                  WARANGAL 360
+                </h1>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#38BDF8', marginTop: '2px' }}>
+                  గ్రేటర్ వరంగల్ మున్సిపల్ కార్పొరేషన్
+                </div>
+              </div>
+            </div>
+
+            <p style={{ fontSize: '13px', opacity: 0.9, lineHeight: 1.5, marginBottom: '24px' }}>
+              Official civic resolution platform for the citizens of Warangal, Hanamkonda & Kazipet. Report ward issues with GPS accuracy and track resolution in real time.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {[
+                { icon: '🏛️', title: 'Historic Orugallu Civic Care', desc: 'Preserving heritage while ensuring clean, smart municipal infrastructure.' },
+                { icon: '⚡', title: 'Strict SLA Tracking', desc: 'Auto-routed to ward engineers with time-bound response deadlines.' },
+                { icon: '📍', title: 'Live Geo-Tagging', desc: 'Real-time location map visualization for all 60 municipal wards.' },
+              ].map((item, idx) => (
+                <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                  <span style={{ fontSize: '16px', flexShrink: 0, marginTop: '2px' }}>{item.icon}</span>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: 700 }}>{item.title}</div>
+                    <div style={{ fontSize: '11px', opacity: 0.8, lineHeight: 1.3 }}>{item.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-          <h1 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--primary-dark)', letterSpacing: '-0.3px' }}>
-            {t('appName')}
-          </h1>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>{t('tagline')}</p>
+
+          <div style={{ fontSize: '11px', opacity: 0.75, marginTop: '24px', borderTop: '1px solid rgba(255,255,255,0.15)', paddingTop: '12px' }}>
+            Greater Warangal Municipal Corporation • 24x7 Control Room
+          </div>
         </div>
 
-        {/* Card */}
-        <div className="card card-bordered" style={{ padding: '24px' }}>
+        {/* ── Right Side: Authentication Forms ── */}
+        <div style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
 
           {/* Error */}
           {error && (

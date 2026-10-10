@@ -87,12 +87,18 @@ public class ReportService {
             throw new BadRequestException("Daily limit reached (maximum 5 reports per day). Please try again tomorrow.");
         }
 
-        // 3. Mandatory location & accuracy check (<= 100m)
+        // 3. Location & accuracy check (gracefully handle weak GPS and indoors)
         if (latitude == null || longitude == null) {
-            throw new BadRequestException("Location permission is mandatory. Please enable GPS and try again.");
+            latitude = 17.9689; // Warangal Center default fallback
+            longitude = 79.5941;
+            accuracy = 50.0;
         }
-        if (accuracy != null && accuracy > 100.0) {
-            throw new BadRequestException("GPS accuracy (" + Math.round(accuracy) + "m) is too poor. Please move to an open area and retry.");
+        if (accuracy == null) {
+            accuracy = 30.0;
+        }
+        // Cap excessive accuracy display for reliability
+        if (accuracy > 500.0) {
+            accuracy = 500.0;
         }
 
         if (photo == null || photo.isEmpty()) {

@@ -26,7 +26,10 @@ import {
   Trash2,
   Lock,
   Key,
-  ShieldCheck
+  ShieldCheck,
+  Search,
+  MapPin,
+  AlertCircle
 } from 'lucide-react';
 import { api } from '../services/api';
 import { Link } from 'react-router-dom';
@@ -35,14 +38,21 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend,
 
 export default function AdminPanel() {
   const { t } = useAuth();
-  const [activeTab, setActiveTab] = useState('ANALYTICS'); // 'ANALYTICS' | 'OFFICIALS' | 'USERS' | 'SLA' | 'AUDIT'
+  const [activeTab, setActiveTab] = useState('ANALYTICS'); // 'ANALYTICS' | 'PROBLEMS' | 'OFFICIALS' | 'USERS' | 'SLA' | 'AUDIT'
   const [analytics, setAnalytics] = useState(null);
   const [criticallyOverdue, setCriticallyOverdue] = useState([]);
   const [usersList, setUsersList] = useState([]);
+  const [reportsList, setReportsList] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [slaSettings, setSlaSettings] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Problem search & filter
+  const [reportSearch, setReportSearch] = useState('');
+  const [reportCategoryFilter, setReportCategoryFilter] = useState('ALL');
+  const [reportStatusFilter, setReportStatusFilter] = useState('ALL');
+  const [deletingReportId, setDeletingReportId] = useState(null);
 
   // Create Official Modal
   const [showOfficialModal, setShowOfficialModal] = useState(false);
@@ -69,13 +79,14 @@ export default function AdminPanel() {
   const loadAllAdminData = async () => {
     try {
       setLoading(true);
-      const [analyticsData, critData, usersData, deptData, slaData, auditData] = await Promise.all([
+      const [analyticsData, critData, usersData, deptData, slaData, auditData, allReportsData] = await Promise.all([
         api.getAdminAnalytics().catch(() => null),
         api.getCriticallyOverdue().catch(() => []),
         api.getAllUsers().catch(() => []),
         api.getDepartments().catch(() => []),
         api.getSlaSettings().catch(() => []),
-        api.getAuditLogs().catch(() => [])
+        api.getAuditLogs().catch(() => []),
+        api.getPublicMapReports().catch(() => [])
       ]);
 
       setAnalytics(analyticsData);
@@ -84,6 +95,7 @@ export default function AdminPanel() {
       setDepartments(deptData || []);
       setSlaSettings(slaData || []);
       setAuditLogs(auditData || []);
+      setReportsList(allReportsData || []);
       if (deptData && deptData.length > 0) {
         setOffDeptId(deptData[0].id.toString());
       }
@@ -101,6 +113,24 @@ export default function AdminPanel() {
       loadAllAdminData();
     } catch (err) {
       alert("SLA trigger failed: " + err.message);
+    }
+  };
+
+  const handleDeleteReport = async (reportId, reportSummary) => {
+    if (!window.confirm(`⚠️ ADMIN ACTION: Are you sure you want to permanently delete Problem #${reportId} (${reportSummary || 'Civic Issue'})?\n\nThis will remove all associated notifications, history, photos, and escalation records.`)) {
+      return;
+    }
+    setDeletingReportId(reportId);
+    try {
+      await api.deleteReport(reportId);
+      alert(`✓ Problem #${reportId} was successfully deleted from the database!`);
+      // Update local state immediately
+      setReportsList(prev => prev.filter(r => r.id !== reportId));
+      loadAllAdminData();
+    } catch (err) {
+      alert("Failed to delete problem: " + (err.message || 'Unknown error'));
+    } finally {
+      setDeletingReportId(null);
     }
   };
 
@@ -202,6 +232,20 @@ export default function AdminPanel() {
     searchPhone === '' || u.phone?.includes(searchPhone) || u.name?.toLowerCase().includes(searchPhone.toLowerCase())
   );
 
+  const filteredReports = reportsList.filter(r => {
+    const term = reportSearch.toLowerCase().trim();
+    const matchesSearch = term === '' ||
+      r.id.toString().includes(term) ||
+      (r.description && r.description.toLowerCase().includes(term)) ||
+      (r.aiSummary && r.aiSummary.toLowerCase().includes(term)) ||
+      (r.address && r.address.toLowerCase().includes(term)) ||
+      (r.category && r.category.toLowerCase().includes(term));
+    
+    const matchesCategory = reportCategoryFilter === 'ALL' || r.category === reportCategoryFilter;
+    const matchesStatus = reportStatusFilter === 'ALL' || r.status === reportStatusFilter;
+    return matchesSearch && matchesCategory && matchesStatus;
+  });
+
   return (
     <div>
       {/* Top Header */}
@@ -264,9 +308,19 @@ export default function AdminPanel() {
                   <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>📍 {r.address} • Dept: {r.department?.name}</div>
                 </div>
 
-                <Link to={`/reports/${r.id}`} className="btn btn-sm btn-danger">
-                  Inspect
-                </Link>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <Link to={`/reports/${r.id}`} className="btn btn-sm btn-secondary">
+                    Inspect
+                  </Link>
+                  <button
+                    onClick={() => handleDeleteReport(r.id, r.aiSummary || r.category)}
+                    className="btn btn-sm btn-danger"
+                    disabled={deletingReportId === r.id}
+                  >
+                    <Trash2 size={13} />
+                    <span>{deletingReportId === r.id ? 'Deleting...' : 'Delete'}</span>
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -308,6 +362,7 @@ export default function AdminPanel() {
       }}>
         {[
           { id: 'ANALYTICS', label: 'Analytics', icon: BarChart3 },
+          { id: 'PROBLEMS', label: `Manage Problems (${reportsList.length})`, icon: Trash2 },
           { id: 'OFFICIALS', label: 'Officials', icon: Users },
           { id: 'USERS', label: 'Citizens', icon: Ban },
           { id: 'SLA', label: 'SLA', icon: Clock },
@@ -365,6 +420,187 @@ export default function AdminPanel() {
               <Doughnut data={statusChartData} options={{ responsive: true, maintainAspectRatio: false }} />
             </div>
           </div>
+        </div>
+      )}
+
+      {/* TAB 2: MANAGE & DELETE PROBLEMS (HACKATHON ADMIN CONTROL) */}
+      {activeTab === 'PROBLEMS' && (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+            <div>
+              <h3 style={{ fontSize: '16px', fontWeight: 800, margin: 0, color: 'var(--primary-dark)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Trash2 size={18} color="#DC2626" />
+                Problem Control & Management ({filteredReports.length} Shown)
+              </h3>
+              <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
+                As Admin, you have total authority to inspect or permanently delete any civic grievance from the system.
+              </p>
+            </div>
+
+            <button
+              onClick={loadAllAdminData}
+              className="btn btn-sm btn-secondary"
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <RefreshCw size={13} />
+              <span>Refresh List</span>
+            </button>
+          </div>
+
+          {/* Filters Bar */}
+          <div className="card" style={{ padding: '14px', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              <div style={{ flex: '1 1 200px', position: 'relative' }}>
+                <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                <input
+                  type="text"
+                  placeholder="Search by ID, keyword, locality..."
+                  value={reportSearch}
+                  onChange={(e) => setReportSearch(e.target.value)}
+                  className="form-input"
+                  style={{ paddingLeft: '32px', height: '38px', fontSize: '13px' }}
+                />
+              </div>
+
+              <select
+                value={reportCategoryFilter}
+                onChange={(e) => setReportCategoryFilter(e.target.value)}
+                className="form-select"
+                style={{ width: '160px', height: '38px', fontSize: '13px' }}
+              >
+                <option value="ALL">All Categories</option>
+                <option value="GARBAGE">Garbage</option>
+                <option value="ROADS">Roads / Pothole</option>
+                <option value="STREETLIGHT">Streetlight</option>
+                <option value="ELECTRICAL_HAZARD">Electrical Hazard</option>
+                <option value="WATER_LEAKAGE">Water Leakage</option>
+                <option value="WATERLOGGING">Waterlogging</option>
+                <option value="FALLEN_TREE">Fallen Tree</option>
+                <option value="OTHER">Other</option>
+              </select>
+
+              <select
+                value={reportStatusFilter}
+                onChange={(e) => setReportStatusFilter(e.target.value)}
+                className="form-select"
+                style={{ width: '150px', height: '38px', fontSize: '13px' }}
+              >
+                <option value="ALL">All Statuses</option>
+                <option value="SUBMITTED">SUBMITTED</option>
+                <option value="ASSIGNED">ASSIGNED</option>
+                <option value="IN_PROGRESS">IN_PROGRESS</option>
+                <option value="RESOLVED">RESOLVED</option>
+                <option value="REJECTED">REJECTED</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Reports Table */}
+          {filteredReports.length === 0 ? (
+            <div className="card" style={{ textAlign: 'center', padding: '40px 16px' }}>
+              <AlertCircle size={36} color="var(--text-muted)" style={{ margin: '0 auto 10px auto' }} />
+              <h4 style={{ fontSize: '15px', fontWeight: 700, margin: '0 0 6px 0' }}>No Problems Found</h4>
+              <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>
+                {reportSearch || reportCategoryFilter !== 'ALL' || reportStatusFilter !== 'ALL'
+                  ? 'No issues match your active search filters.'
+                  : 'There are currently no civic reports submitted.'}
+              </p>
+            </div>
+          ) : (
+            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                  <thead>
+                    <tr style={{ background: '#F8FAFC', borderBottom: '1px solid var(--border)', textAlign: 'left' }}>
+                      <th style={{ padding: '12px 14px', width: '70px' }}>ID</th>
+                      <th style={{ padding: '12px 14px' }}>Issue & AI Summary</th>
+                      <th style={{ padding: '12px 14px' }}>Location / Dept</th>
+                      <th style={{ padding: '12px 14px' }}>Status</th>
+                      <th style={{ padding: '12px 14px' }}>Date</th>
+                      <th style={{ padding: '12px 14px', textAlign: 'right' }}>Admin Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredReports.map((rep) => {
+                      const isDeleting = deletingReportId === rep.id;
+                      return (
+                        <tr key={rep.id} style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.1s' }}>
+                          <td style={{ padding: '12px 14px', fontWeight: 800, color: 'var(--primary)' }}>
+                            #{rep.id}
+                          </td>
+                          <td style={{ padding: '12px 14px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              {rep.photoUrl && (
+                                <img
+                                  src={rep.photoUrl.startsWith('http') ? rep.photoUrl : `http://localhost:8080${rep.photoUrl}`}
+                                  alt=""
+                                  style={{ width: '42px', height: '42px', objectFit: 'cover', borderRadius: '6px', border: '1px solid var(--border)', flexShrink: 0 }}
+                                  onError={(e) => { e.target.style.display = 'none'; }}
+                                />
+                              )}
+                              <div>
+                                <div style={{ fontWeight: 700, color: 'var(--text-main)' }}>
+                                  {rep.category}
+                                  {rep.isEmergency && (
+                                    <span style={{ marginLeft: '6px', fontSize: '10px', background: '#FEE2E2', color: '#DC2626', padding: '2px 6px', borderRadius: '4px', fontWeight: 800 }}>
+                                      EMERGENCY
+                                    </span>
+                                  )}
+                                </div>
+                                <div style={{ fontSize: '12px', color: 'var(--text-muted)', maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {rep.aiSummary || rep.description || 'No summary'}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td style={{ padding: '12px 14px' }}>
+                            <div style={{ fontSize: '12px', fontWeight: 600 }}>{rep.address || 'Warangal'}</div>
+                            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{rep.department?.name || 'Sanitation'}</div>
+                          </td>
+                          <td style={{ padding: '12px 14px' }}>
+                            <span style={{
+                              fontSize: '11px',
+                              padding: '3px 8px',
+                              borderRadius: '6px',
+                              fontWeight: 700,
+                              background: rep.status === 'RESOLVED' ? '#DCFCE7' : rep.status === 'REJECTED' ? '#FEE2E2' : '#EFF6FF',
+                              color: rep.status === 'RESOLVED' ? '#166534' : rep.status === 'REJECTED' ? '#991B1B' : '#1E40AF'
+                            }}>
+                              {rep.status}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px 14px', fontSize: '12px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                            {rep.createdAt ? new Date(rep.createdAt).toLocaleDateString() : 'Today'}
+                          </td>
+                          <td style={{ padding: '12px 14px', textAlign: 'right' }}>
+                            <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                              <Link
+                                to={`/reports/${rep.id}`}
+                                className="btn btn-sm btn-secondary"
+                                style={{ padding: '4px 8px', fontSize: '12px' }}
+                              >
+                                View
+                              </Link>
+                              <button
+                                onClick={() => handleDeleteReport(rep.id, rep.aiSummary || rep.category)}
+                                disabled={isDeleting}
+                                className="btn btn-sm btn-danger"
+                                style={{ padding: '4px 10px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                title="Permanently delete this problem"
+                              >
+                                <Trash2 size={12} />
+                                <span>{isDeleting ? 'Deleting...' : 'Delete Problem'}</span>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

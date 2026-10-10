@@ -1,16 +1,35 @@
-# React + Vite
+# WARANGAL 360 - Frontend App (React + Vite)
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Frontend web application for **WARANGAL 360 (వరంగల్ 360)** civic issue reporting, emergency notification system, and public accountability dashboard.
 
-Currently, two official plugins are available:
+## 🚀 Key Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Live Camera Capture & Canvas Watermarking:** Captures photo directly from browser camera with embedded GPS coordinates, timestamp, and location tag.
+- **Real-Time Image Validation:** Pre-verifies photo brightness/histogram before submission to block dark/invalid uploads.
+- **Interactive Geo Mapping:** OpenStreetMap integration with Leaflet for reporting locations, interactive pins, and direction links.
+- **Emergency Notifications & Alerts:** Real-time popups and banner announcements for emergency municipal notices.
+- **Citizen Grievance Management:** View live status, SLA timers, and delete citizen's own reports.
+- **Super Admin & Dept Official Consoles:** Queue management, resolution proof submission, official onboarding, notice creation & deletion.
+- **Bilingual UI:** Instant toggle between English and Telugu (తెలుగు).
 
-## React Compiler
+## 🧰 Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Framework:** React 18 with Vite
+- **Styling:** Modern Vanilla CSS (Design Tokens, Dark/Glassmorphism Theme)
+- **Icons & Visuals:** Lucide React
+- **Mapping:** Leaflet & React-Leaflet
+- **Charts:** Chart.js & React-Chartjs-2
 
-## Expanding the Oxlint configuration
+## 📦 Getting Started
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+```bash
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+
+# Build production bundle
+npm run build
+```
+Runs at `http://localhost:5173`.

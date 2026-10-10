@@ -144,6 +144,8 @@ export const api = {
       body: JSON.stringify(noticeData),
     }),
 
+  deleteNotice: (id) => apiRequest(`/api/notices/${id}`, { method: 'DELETE' }),
+
   // Contacts & Departments
   getEmergencyContacts: () => apiRequest('/api/contacts/public'),
 
@@ -186,7 +188,7 @@ export const api = {
     }),
 
   deleteReport: (id) =>
-    apiRequest(`/api/admin/reports/${id}`, { method: 'DELETE' }),
+    apiRequest(`/api/reports/${id}`, { method: 'DELETE' }),
 
   getDeptOfficers: (departmentId) =>
     apiRequest(`/api/admin/dept-officers/${departmentId}`),

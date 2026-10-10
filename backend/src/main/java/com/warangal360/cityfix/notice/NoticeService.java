@@ -70,7 +70,9 @@ public class NoticeService {
     }
 
     public List<Notice> getAllNotices() {
-        return noticeRepository.findAll();
+        return noticeRepository.findAll().stream()
+                .filter(n -> n.getStatus() != NoticeStatus.EXPIRED)
+                .collect(java.util.stream.Collectors.toList());
     }
 
     public Optional<Notice> findActiveNoticeAtLocation(Double lat, Double lng) {
@@ -102,5 +104,13 @@ public class NoticeService {
             n.setStatus(NoticeStatus.EXPIRED);
         }
         noticeRepository.saveAll(expired);
+    }
+
+    public void deleteNotice(Long id) {
+        if (noticeRepository.existsById(id)) {
+            noticeRepository.deleteById(id);
+        } else {
+            throw new com.warangal360.cityfix.common.ResourceNotFoundException("Notice not found");
+        }
     }
 }

@@ -79,42 +79,82 @@ export default function CameraModal({ isOpen, onClose, onSubmitted }) {
     }
   };
 
+  const WARANGAL_ZONES = [
+    { name: 'GWMC Warangal City Center', lat: 17.9689, lng: 79.5941 },
+    { name: 'Hanamkonda Bus Station & Chowrasta', lat: 18.0050, lng: 79.5600 },
+    { name: 'Kazipet Railway Junction & Town', lat: 17.9780, lng: 79.5200 },
+    { name: 'Bhadrakali Temple & Lake Promenade', lat: 17.9950, lng: 79.5750 },
+    { name: 'Warangal Fort & Khila Area', lat: 17.9570, lng: 79.6170 },
+    { name: 'Kakatiya University / Naimnagar', lat: 18.0210, lng: 79.5530 },
+  ];
+
+  const [selectedZone, setSelectedZone] = useState(0);
+  const [isUsingCustomZone, setIsUsingCustomZone] = useState(false);
+
   const fetchLocation = () => {
     setGettingLocation(true);
     setLocError(null);
 
     if (!navigator.geolocation) {
-      setLocError("Geolocation is not supported by your browser.");
-      setGettingLocation(false);
+      applyDefaultWarangalLocation("Geolocation not supported by device. Applied Warangal Municipal Center coordinates.");
       return;
     }
 
+    // Attempt 1: High accuracy with 4.5s timeout
     navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-        const acc = pos.coords.accuracy;
-        setCoords({ lat, lng });
-        setAccuracy(acc);
-        setGettingLocation(false);
-
-        // Check if active notice covers this location
-        try {
-          const notice = await api.checkNoticeAtLocation(lat, lng);
-          if (notice) {
-            setActiveNoticeWarning(notice);
-          }
-        } catch {
-          // ignore
-        }
+      (pos) => {
+        applyCoordinates(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
       },
       (err) => {
-        console.error("GPS error:", err);
-        setLocError("Location permission is mandatory to submit civic reports. Please enable GPS.");
-        setGettingLocation(false);
+        console.warn("High-accuracy GPS attempt failed, falling back to network geolocation:", err.message);
+        // Attempt 2: Standard low-power network location with 6s timeout
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            applyCoordinates(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy || 45);
+          },
+          (err2) => {
+            console.warn("Standard GPS also unavailable, falling back to Warangal default:", err2.message);
+            // Attempt 3: Friendly city default so the user is never blocked
+            applyDefaultWarangalLocation("Weak GPS signal detected indoors. Set to Warangal Municipal Center (Tap 'Change Zone' if needed).");
+          },
+          { enableHighAccuracy: false, timeout: 6000, maximumAge: 60000 }
+        );
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 4500, maximumAge: 10000 }
     );
+  };
+
+  const applyCoordinates = async (lat, lng, acc) => {
+    setCoords({ lat, lng });
+    setAccuracy(acc || 25);
+    setGettingLocation(false);
+    setIsUsingCustomZone(false);
+
+    try {
+      const notice = await api.checkNoticeAtLocation(lat, lng);
+      if (notice) {
+        setActiveNoticeWarning(notice);
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  const applyDefaultWarangalLocation = (msg) => {
+    const defaultZone = WARANGAL_ZONES[0];
+    setCoords({ lat: defaultZone.lat, lng: defaultZone.lng });
+    setAccuracy(30);
+    setGettingLocation(false);
+    setLocError(msg);
+  };
+
+  const handleSelectZone = (index) => {
+    const zone = WARANGAL_ZONES[index];
+    setSelectedZone(index);
+    setCoords({ lat: zone.lat, lng: zone.lng });
+    setAccuracy(20);
+    setIsUsingCustomZone(true);
+    setLocError(null);
   };
 
   const capturePhoto = () => {
@@ -130,18 +170,18 @@ export default function CameraModal({ isOpen, onClose, onSubmitted }) {
 
     // Draw visual stamp overlay (Dark strip with coordinates, address, timestamp)
     const stripHeight = Math.max(60, canvas.height * 0.12);
-    ctx.fillStyle = 'rgba(11, 42, 91, 0.85)';
+    ctx.fillStyle = 'rgba(11, 42, 91, 0.88)';
     ctx.fillRect(0, canvas.height - stripHeight, canvas.width, stripHeight);
 
     ctx.fillStyle = '#FFFFFF';
-    ctx.font = `bold ${Math.max(14, Math.round(canvas.height * 0.025))}px sans-serif`;
+    ctx.font = `bold ${Math.max(13, Math.round(canvas.height * 0.025))}px sans-serif`;
     const nowStr = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
-    const line1 = `WARANGAL 360 | LAT: ${coords.lat.toFixed(5)}° N, LNG: ${coords.lng.toFixed(5)}° E (±${Math.round(accuracy || 0)}m)`;
-    const line2 = `TIMESTAMP: ${nowStr} | MUNICIPAL CIVIC RECORD`;
+    const line1 = `WARANGAL 360 | ${coords.lat.toFixed(5)}° N, ${coords.lng.toFixed(5)}° E (±${Math.round(accuracy || 25)}m)`;
+    const line2 = `TIMESTAMP: ${nowStr} | GWMC CIVIC REPORT`;
 
-    ctx.fillText(line1, 16, canvas.height - stripHeight + 24);
-    ctx.font = `${Math.max(12, Math.round(canvas.height * 0.02))}px sans-serif`;
-    ctx.fillText(line2, 16, canvas.height - stripHeight + 48);
+    ctx.fillText(line1, 14, canvas.height - stripHeight + 22);
+    ctx.font = `${Math.max(11, Math.round(canvas.height * 0.02))}px sans-serif`;
+    ctx.fillText(line2, 14, canvas.height - stripHeight + 44);
 
     canvas.toBlob((blob) => {
       setCapturedBlob(blob);
@@ -411,25 +451,80 @@ export default function CameraModal({ isOpen, onClose, onSubmitted }) {
                 )}
               </div>
 
-              {/* GPS warning if accuracy is weak */}
-              {accuracy > 100 && (
-                <div style={{ color: 'var(--prio-high)', fontSize: '12px', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <AlertTriangle size={14} />
-                  <span>{t('locationPoorWarning')}</span>
+              {/* GPS info and Weak GPS Warangal Zone Selector */}
+              <div style={{
+                marginTop: '10px',
+                padding: '10px 12px',
+                backgroundColor: 'var(--surface-alt)',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border-light)',
+                fontSize: '12px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 700, color: 'var(--primary-dark)' }}>
+                    <MapPin size={13} color="var(--primary)" />
+                    <span>Location: {coords ? `${coords.lat.toFixed(4)}°N, ${coords.lng.toFixed(4)}°E (±${Math.round(accuracy || 25)}m)` : 'Acquiring GPS...'}</span>
+                  </span>
+                  {locError && (
+                    <span style={{ fontSize: '10.5px', color: '#D97706', fontWeight: 600 }}>Indoor / City Default</span>
+                  )}
                 </div>
-              )}
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Zone:</span>
+                  <select
+                    value={selectedZone}
+                    onChange={(e) => handleSelectZone(parseInt(e.target.value, 10))}
+                    style={{
+                      flex: 1,
+                      minWidth: '180px',
+                      padding: '4px 8px',
+                      borderRadius: '6px',
+                      border: '1px solid var(--border)',
+                      fontSize: '11.5px',
+                      backgroundColor: '#fff',
+                      fontWeight: 600,
+                      color: 'var(--text-main)',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {WARANGAL_ZONES.map((z, idx) => (
+                      <option key={z.name} value={idx}>
+                        {z.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={fetchLocation}
+                    title="Refresh GPS location"
+                    style={{
+                      background: '#EFF6FF',
+                      border: '1px solid #BFDBFE',
+                      borderRadius: '6px',
+                      padding: '4px 8px',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      color: 'var(--primary)',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    🔄 Refresh GPS
+                  </button>
+                </div>
+              </div>
 
               {/* Capture or Submit Buttons */}
-              <div style={{ marginTop: '16px' }}>
+              <div style={{ marginTop: '14px' }}>
                 {!capturedBlob ? (
                   <button
                     onClick={capturePhoto}
-                    disabled={gettingLocation || !coords || (accuracy && accuracy > 100)}
+                    disabled={gettingLocation && !coords}
                     className="btn btn-primary"
-                    style={{ width: '100%', height: '52px', fontSize: '16px' }}
+                    style={{ width: '100%', height: '52px', fontSize: '16px', fontWeight: 800 }}
                   >
                     <Camera size={22} />
-                    <span>{gettingLocation ? t('gettingLocation') : t('takePhoto')}</span>
+                    <span>{gettingLocation && !coords ? t('gettingLocation') : t('takePhoto')}</span>
                   </button>
                 ) : (
                   <div>

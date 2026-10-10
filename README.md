@@ -1,41 +1,59 @@
 # WARANGAL 360 (వరంగల్ 360)
 
-> **Civic Grievance Reporting, AI Classification & Automated SLA Escalation Platform for Greater Warangal**
+> **AI-Driven Civic Issue Resolution, Emergency Alert System & Automated Public Accountability Platform for Greater Warangal**
 
 ---
 
 ## 🌟 Overview & Key Features
 
-1. **Live Camera & Geolocation Stamping:** Mandatory camera capture with visual timestamp, coordinates, and address watermarking on-canvas to eliminate fake or stale gallery uploads.
-2. **Multi-Stage Spam & Deduplication Pipeline:**
-   - Client GPS accuracy check ($\le 100\text{m}$)
-   - User daily limits (~5 reports/day)
-   - SHA-256 file hash & 64-bit perceptual `dHash` matching
-   - 75-meter spatial proximity deduplication (merges duplicates with parent report count increment)
-   - Detection of reused photos near recently resolved locations.
-3. **Consolidated Vision AI Analysis:** Single LLM call (Google Gemini Free Tier / Smart Fallback) classifying civic issues, severity (1–5), English summary, department routing, and crew/equipment estimation.
-4. **Transparent Priority Scoring:**
+1. **Live Camera & Geolocation Stamping:**
+   - Mandatory real-time camera capture with visual timestamp, exact GPS coordinates, and street address watermarking on-canvas to eliminate stale or fake gallery uploads.
+
+2. **Advanced AI Vision & Image Verification:**
+   - Real-time image validation rejecting pitch-black, pitch-white, featureless, or corrupted photos before submission.
+   - Integrated Google Gemini AI for issue classification, severity scoring (1–5), concise English & Telugu summaries, municipal department routing, and resource/crew estimation.
+
+3. **Multi-Stage Anti-Spam & Deduplication Pipeline:**
+   - Client GPS accuracy validation ($\le 100\text{m}$).
+   - Rate limiting per user (~5 reports/day).
+   - SHA-256 file hashing & 64-bit perceptual `dHash` matching.
+   - 75-meter spatial proximity deduplication (merges duplicate reports into parent issues with incremented citizen count).
+
+4. **Transparent Dynamic Priority Engine:**
    $$\text{Score} = (\text{Severity} \times 20) + (\min(\text{Count}, 10) \times 3) + (\text{Days Open} \times 2) + \text{Weather Bonus} + \text{Sensitive Location Bonus} + \text{Emergency Bonus}$$
-   - *Weather Bonus (+15):* Real-time Open-Meteo rain & storm condition detection.
-   - *Sensitive Location Bonus (+15):* Proximity to Warangal schools, colleges (NIT Warangal, KMC, Kakatiya University), and hospitals (MGM Hospital).
-5. **Department Queues & Official Workflow:**
-   - 5 Municipal Departments: Sanitation, Roads, Electricity, Water, Disaster Management.
-   - Live resolution proof photo capture by officials.
-   - Citizen resolution feedback loop: *"Is it really fixed?"* (reopens report and resets SLA clock if issues persist).
-6. **Background SLA Scheduler & 2-Level Escalation:**
-   - Level 0: Field Officer
-   - Level 1: Auto-escalation to Department Head upon missed response deadlines
-   - Level 2: Flagged as *Critically Overdue* on the Super Admin console.
-7. **Geofenced Department Announcements:** Area-targeted planned works & emergency hazard alerts with AI English-to-Telugu translation.
-8. **Bilingual Design:** Instant toggle between English and Telugu (తెలుగు) across all citizen interfaces.
+   - **Weather Bonus (+15):** Real-time Open-Meteo API rain & storm condition integration.
+   - **Sensitive Location Bonus (+15):** Proximity awareness to Warangal educational institutions (NIT Warangal, KMC, Kakatiya University) and key hospitals (MGM Hospital).
+
+5. **Real-Time Emergency Alerts & Public Notices:**
+   - Broadcast emergency alerts and municipal notices.
+   - Automatic screen popups for active emergency notices across the citizen portal.
+   - Auto-filtering and background cleanup of expired emergency notices.
+   - Admin & Department Head notice management with quick-delete options post-resolution.
+
+6. **Interactive Geo-Location Mapping:**
+   - Full interactive Leaflet & OpenStreetMap visualization on Report Details.
+   - High-visibility map pins marking exact grievance locations with satellite/street view toggle and navigation directions.
+
+7. **Unified Deletion & Life-Cycle Management:**
+   - **Citizen Autonomy:** Citizens can easily delete their own reported grievances if resolved independently or created by mistake.
+   - **Administrative Control:** Admins and Department Officials can delete resolved, duplicate, or outdated reports and emergency notices.
+
+8. **Department Queues & SLA Escalation Workflow:**
+   - 5 Core Departments: Sanitation, Roads, Electricity, Water Supply, Disaster Management.
+   - Required resolution proof photo upload by field officers.
+   - Citizen verification loop: *"Is it fixed?"* (reopens report and resets SLA clock if issues persist).
+   - Automated 2-Level SLA Escalation (L0 Field Officer $\rightarrow$ L1 Dept Head $\rightarrow$ L2 Super Admin Overdue Flag).
+
+9. **Bilingual Accessibility:**
+   - Instant toggle between English and Telugu (తెలుగు) across all views.
 
 ---
 
 ## 🛠️ Technology Stack
 
-- **Backend:** Java 17+, Spring Boot 3.3.4, Spring Data JPA, Spring Security (JWT), MySQL / H2
-- **Frontend:** React, Vite, Leaflet, OpenStreetMap, Chart.js, Lucide Icons, Vanilla CSS Design System
-- **External Services:** Open-Meteo (Weather), OpenStreetMap Nominatim (Reverse Geocoding), Google Gemini API (Vision AI & Translation)
+- **Backend:** Java 17+, Spring Boot 3.3.4, Spring Data JPA, Spring Security (JWT), MySQL / H2 Database
+- **Frontend:** React 18, Vite, Leaflet, OpenStreetMap, Chart.js, Lucide Icons, Modern Vanilla CSS Design System
+- **AI & Integrations:** Google Gemini Vision API, Open-Meteo Weather API, OpenStreetMap Nominatim Geocoding
 
 ---
 
@@ -69,4 +87,12 @@ npm run dev
 | **Citizen** | Ramesh Babu | `+919876543211` | `Citizen@123` |
 | **Citizen** | Priya Sharma | `+919876543212` | `Citizen@123` |
 
-> ℹ️ **Department Officials & Heads (L0 & L1)**: All pre-seeded officers have been cleared. Super Admin can add and manage officials with custom passwords directly from the **Super Admin Panel (`/admin`) → Officials Management**.
+> ℹ️ **Department Officials & Heads (L0 & L1)**: Custom officials can be added dynamically by the Super Admin from **Super Admin Panel (`/admin`) → Officials Management**.
+
+---
+
+## 📄 Documentation
+
+- [`ARCHITECTURE.md`](file:///c:/Users/adhar/OneDrive/Desktop/Projects/WARANGAL%20360/ARCHITECTURE.md) - System architecture and component interactions.
+- [`PRD.md`](file:///c:/Users/adhar/OneDrive/Desktop/Projects/WARANGAL%20360/PRD.md) - Product Requirements Document & Specifications.
+- [`DESIGN.md`](file:///c:/Users/adhar/OneDrive/Desktop/Projects/WARANGAL%20360/DESIGN.md) - Design guidelines & color palette tokens.

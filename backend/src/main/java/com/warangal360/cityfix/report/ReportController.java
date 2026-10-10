@@ -18,10 +18,12 @@ public class ReportController {
 
     private final ReportService reportService;
     private final ReportRepository reportRepository;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
-    public ReportController(ReportService reportService, ReportRepository reportRepository) {
+    public ReportController(ReportService reportService, ReportRepository reportRepository, org.springframework.jdbc.core.JdbcTemplate jdbcTemplate) {
         this.reportService = reportService;
         this.reportRepository = reportRepository;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -129,5 +131,35 @@ public class ReportController {
     public ResponseEntity<ApiResponse<List<Report>>> getCriticallyOverdue() {
         List<Report> list = reportRepository.findCriticallyOverdueReports();
         return ResponseEntity.ok(ApiResponse.ok(list));
+    }
+
+    // Allow citizen to delete their own report
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteMyReport(
+            @PathVariable Long id,
+            @AuthenticationPrincipal User currentUser) {
+        Report report = reportRepository.findById(id)
+                .orElseThrow(() -> new com.warangal360.cityfix.common.ResourceNotFoundException("Report not found"));
+
+        // Check ownership — only the user who submitted OR an admin can delete
+        boolean isOwner = report.getUser() != null && report.getUser().getId().equals(currentUser.getId());
+        boolean isAdmin = currentUser.getRole() == com.warangal360.cityfix.user.Role.ROLE_ADMIN;
+
+        if (!isOwner && !isAdmin) {
+            throw new com.warangal360.cityfix.common.BadRequestException("You can only delete your own reports.");
+        }
+
+        try {
+            jdbcTemplate.update("DELETE FROM notifications WHERE report_id = ?", id);
+            jdbcTemplate.update("DELETE FROM escalation_log WHERE report_id = ?", id);
+            jdbcTemplate.update("DELETE FROM status_updates WHERE report_id = ?", id);
+            jdbcTemplate.update("DELETE FROM report_upvotes WHERE report_id = ?", id);
+            jdbcTemplate.update("UPDATE reports SET parent_report_id = NULL WHERE parent_report_id = ?", id);
+            reportRepository.deleteById(id);
+        } catch (Exception e) {
+            throw new com.warangal360.cityfix.common.BadRequestException("Could not delete report: " + e.getMessage());
+        }
+
+        return ResponseEntity.ok(ApiResponse.ok("Report deleted successfully", null));
     }
 }
