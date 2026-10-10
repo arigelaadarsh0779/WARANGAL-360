@@ -1,0 +1,65 @@
+version: '3.8'
+
+# ========================================================
+# WARANGAL 360 — Full Stack Docker Compose Architecture
+# Multi-container orchestrator: MySQL DB + Backend + Frontend
+# ========================================================
+
+services:
+  # 1. Database Service (MySQL 8.0)
+  db:
+    image: mysql:8.0
+    container_name: warangal360-db
+    restart: always
+    environment:
+      MYSQL_DATABASE: cityfix
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_USER: cityfix_user
+      MYSQL_PASSWORD: cityfix_pass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 2. Spring Boot Backend Service (Java 17)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: warangal360-backend
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/cityfix?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: cityfix_user
+      SPRING_DATASOURCE_PASSWORD: cityfix_pass
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-""}
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - uploads_data:/app/uploads
+
+  # 3. React Frontend Service (Nginx)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: warangal360-frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+# Persistent Volumes
+volumes:
+  mysql_data:
+  uploads_data:
