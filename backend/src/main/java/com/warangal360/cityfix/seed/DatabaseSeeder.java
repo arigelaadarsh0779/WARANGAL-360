@@ -122,12 +122,13 @@ public class DatabaseSeeder implements CommandLineRunner {
         User citizen2 = getOrCreateCitizen("Ramesh Babu", "+919876543211", "en");
         User citizen3 = getOrCreateCitizen("Priya Sharma", "+919876543212", "en");
 
-        if (noticeRepository.count() == 0) {
-            // 5. Notices
+        // 5. Notices
+        String n1Title = "Planned Maintenance Power Shutdown - Hanamkonda Subedari";
+        if (!noticeRepository.existsByTitle(n1Title)) {
             Notice notice1 = new Notice();
             notice1.setDepartment(electricity);
             notice1.setAuthor(admin);
-            notice1.setTitle("Planned Maintenance Power Shutdown - Hanamkonda Subedari");
+            notice1.setTitle(n1Title);
             notice1.setMessageEn("Scheduled 33kV transformer maintenance and feeder overhaul. Power will be interrupted from 2:00 PM to 6:00 PM today.");
             notice1.setMessageTe("హనుమకొండ సుబేదారి ప్రాంతంలో 33kV ట్రాన్స్‌ఫార్మర్ మరమ్మతుల కారణంగా ఈరోజు మధ్యాహ్నం 2:00 నుండి సాయంత్రం 6:00 వరకు విద్యుత్ సరఫరా నిలిపివేయబడుతుంది.");
             notice1.setAreaName("Subedari & Balasamudram, Hanamkonda");
@@ -140,11 +141,14 @@ public class DatabaseSeeder implements CommandLineRunner {
             notice1.setType(NoticeType.PLANNED);
             notice1.setStatus(NoticeStatus.ACTIVE);
             noticeRepository.save(notice1);
+        }
 
+        String n2Title = "Heavy Inundation Warning near Waddepally Tank";
+        if (!noticeRepository.existsByTitle(n2Title)) {
             Notice notice2 = new Notice();
             notice2.setDepartment(disaster);
             notice2.setAuthor(admin);
-            notice2.setTitle("Heavy Inundation Warning near Waddepally Tank");
+            notice2.setTitle(n2Title);
             notice2.setMessageEn("Due to heavy rainfall upstream, low-lying storm channels near Waddepally cause temporary waterlogging. Emergency response pumps deployed.");
             notice2.setMessageTe("భారీ వర్షాల కారణంగా వడ్డేపల్లి చెరువు సమీప లోతట్టు ప్రాంతాలలో నీరు నిలిచే అవకాశం ఉంది. అత్యవసర డీవాటరింగ్ పంపులు ఏర్పాటు చేయబడ్డాయి.");
             notice2.setAreaName("Waddepally Lake Surrounds");
@@ -157,6 +161,26 @@ public class DatabaseSeeder implements CommandLineRunner {
             notice2.setType(NoticeType.EMERGENCY);
             notice2.setStatus(NoticeStatus.ACTIVE);
             noticeRepository.save(notice2);
+        }
+
+        String n3Title = "Scheduled Power Cut-off Notice - KITS Warangal College Area";
+        if (!noticeRepository.existsByTitle(n3Title)) {
+            Notice notice3 = new Notice();
+            notice3.setDepartment(electricity);
+            notice3.setAuthor(admin);
+            notice3.setTitle(n3Title);
+            notice3.setMessageEn("Emergency 11kV substation feeder maintenance near Kakatiya Institute of Technology & Science (KITS Warangal). Power supply will be interrupted today from 10:00 AM to 4:00 PM.");
+            notice3.setMessageTe("కాకతీయ ఇన్‌స్టిట్యూట్ ఆఫ్ టెక్నాలజీ అండ్ సైన్స్ (KITS వరంగల్) మరియు ఎర్రగట్టు గుట్ట ప్రాంతంలో 11kV సబ్‌స్టేషన్ మరమ్మతుల కారణంగా ఈరోజు ఉదయం 10:00 నుండి సాయంత్రం 4:00 వరకు విద్యుత్ సరఫరా నిలిపివేయబడుతుంది.");
+            notice3.setAreaName("KITS Warangal Campus, Yerragattu & Hasanparthy Road");
+            notice3.setLatitude(17.9830);
+            notice3.setLongitude(79.5315);
+            notice3.setRadiusMeters(2000.0);
+            notice3.setStartTime(LocalDateTime.now().minusHours(1));
+            notice3.setEndTime(LocalDateTime.now().plusHours(6));
+            notice3.setReason("11kV Feeder Line Maintenance & Substation Overhaul");
+            notice3.setType(NoticeType.PLANNED);
+            notice3.setStatus(NoticeStatus.ACTIVE);
+            noticeRepository.save(notice3);
         }
 
         // 6. Realistic Seed Reports across Warangal

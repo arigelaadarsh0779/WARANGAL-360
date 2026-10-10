@@ -18,6 +18,8 @@ public interface NoticeRepository extends JpaRepository<Notice, Long> {
     @Query("SELECT n FROM Notice n WHERE n.status = 'ACTIVE' AND n.startTime <= :now AND n.endTime >= :now ORDER BY n.type DESC, n.createdAt DESC")
     List<Notice> findCurrentlyActiveNotices(@Param("now") LocalDateTime now);
 
+    boolean existsByTitle(String title);
+
     @Query("SELECT n FROM Notice n WHERE n.status = 'ACTIVE' AND n.endTime < :now")
     List<Notice> findExpiredNotices(@Param("now") LocalDateTime now);
 }
