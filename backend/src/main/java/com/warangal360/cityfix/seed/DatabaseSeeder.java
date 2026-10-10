@@ -577,6 +577,35 @@ public class DatabaseSeeder implements CommandLineRunner {
             r13.setResolutionDeadline(LocalDateTime.now().plusDays(6));
             reportRepository.save(r13);
         }
+
+        // Report 14: Faded Zebra Crossing & Missing Street Sign (Roads - Normal Level Problem)
+        if (reportRepository.findByFileHash("hash_sign_busstand_14").isEmpty()) {
+            Report r14 = new Report();
+            r14.setUser(citizen3);
+            r14.setDescription("Faded pedestrian zebra crossing paint and missing street name sign board near Hanamkonda old bus stand junction.");
+            r14.setPhotoUrl("https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=600&auto=format&fit=crop&q=60");
+            r14.setFileHash("hash_sign_busstand_14");
+            r14.setPhash("d7e8f9a0b1c2d3e4");
+            r14.setLatitude(17.9982);
+            r14.setLongitude(79.5610);
+            r14.setAccuracy(10.0);
+            r14.setAddress("Old Bus Stand Junction, Subedari, Hanamkonda 506001");
+            r14.setCapturedAt(LocalDateTime.now().minusHours(2));
+            r14.setCreatedAt(LocalDateTime.now().minusHours(2));
+            r14.setCategory(Category.ROADS);
+            r14.setAiSeverity(1); // Severity 1 = Normal Level Problem
+            r14.setIsEmergency(false);
+            r14.setAiSummary("Faded pedestrian zebra crossing markings and missing street sign board");
+            r14.setAiCrewEstimate("2 painters + thermoplastic line marking machine");
+            r14.setDepartment(roads);
+            r14.setPriorityScore(24); // Low / Normal Priority Score
+            r14.setStatus(ReportStatus.SUBMITTED);
+            r14.setReportCount(1);
+            r14.setUpvotes(2);
+            r14.setResponseDeadline(LocalDateTime.now().plusHours(24));
+            r14.setResolutionDeadline(LocalDateTime.now().plusDays(7)); // Standard 7-day routine SLA
+            reportRepository.save(r14);
+        }
     }
 
     private Department getOrCreateDepartment(String name, String email, String phone, String description) {
