@@ -577,6 +577,7 @@ public class DatabaseSeeder implements CommandLineRunner {
             r13.setResolutionDeadline(LocalDateTime.now().plusDays(6));
             reportRepository.save(r13);
         }
+    }
 
     private Department getOrCreateDepartment(String name, String email, String phone, String description) {
         return departmentRepository.findByNameIgnoreCase(name)
