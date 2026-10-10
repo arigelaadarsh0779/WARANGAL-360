@@ -321,6 +321,238 @@ public class DatabaseSeeder implements CommandLineRunner {
         r5.setResponseDeadline(LocalDateTime.now().plusHours(1));
         r5.setResolutionDeadline(LocalDateTime.now().plusHours(45));
         reportRepository.save(r5);
+
+        // Report 6: Broken streetlight near Bhadrakali Temple Road (Electricity)
+        Report r6 = new Report();
+        r6.setUser(citizen3);
+        r6.setDescription("Streetlight near Bhadrakali junction has been completely dark for 4 days. Very dangerous at night.");
+        r6.setPhotoUrl("https://images.unsplash.com/photo-1609766857793-4b9e58ee11c5?w=600&auto=format&fit=crop&q=60");
+        r6.setFileHash("hash_light_bhadrakali_06");
+        r6.setPhash("f60718293a4b5c6d");
+        r6.setLatitude(17.9775);
+        r6.setLongitude(79.5918);
+        r6.setAccuracy(10.0);
+        r6.setAddress("Bhadrakali Temple Road, Hanamkonda, Warangal 506001");
+        r6.setCapturedAt(LocalDateTime.now().minusDays(1));
+        r6.setCreatedAt(LocalDateTime.now().minusDays(1));
+        r6.setCategory(Category.STREETLIGHT);
+        r6.setAiSeverity(2);
+        r6.setIsEmergency(false);
+        r6.setAiSummary("Non-functional streetlight causing night-time hazard near religious site");
+        r6.setAiCrewEstimate("1 electrician + hydraulic lift vehicle");
+        r6.setDepartment(electricity);
+        r6.setPriorityScore(54);
+        r6.setStatus(ReportStatus.SUBMITTED);
+        r6.setReportCount(2);
+        r6.setUpvotes(3);
+        r6.setResponseDeadline(LocalDateTime.now().plusHours(23));
+        r6.setResolutionDeadline(LocalDateTime.now().plusDays(3));
+        reportRepository.save(r6);
+
+        // Report 7: Waterlogging near Warangal Fort Gate (Disaster Management / Waterlogging)
+        Report r7 = new Report();
+        r7.setUser(citizen1);
+        r7.setDescription("Massive waterlogging near Warangal Fort entrance, knee-deep water blocking vehicles and pedestrians.");
+        r7.setPhotoUrl("https://images.unsplash.com/photo-1547683905-f686c993aae5?w=600&auto=format&fit=crop&q=60");
+        r7.setFileHash("hash_flood_fort_07");
+        r7.setPhash("60718293a4b5c6d7");
+        r7.setLatitude(17.9618);
+        r7.setLongitude(79.5940);
+        r7.setAccuracy(9.0);
+        r7.setAddress("Warangal Fort Archaeological Site Gate, Warangal 506004");
+        r7.setCapturedAt(LocalDateTime.now().minusHours(5));
+        r7.setCreatedAt(LocalDateTime.now().minusHours(5));
+        r7.setCategory(Category.WATERLOGGING);
+        r7.setAiSeverity(4);
+        r7.setIsEmergency(true);
+        r7.setAiSummary("Severe waterlogging blocking historical site access road");
+        r7.setAiCrewEstimate("4 disaster management personnel + 2 dewatering pumps");
+        r7.setDepartment(disaster);
+        r7.setPriorityScore(98);
+        r7.setStatus(ReportStatus.IN_PROGRESS);
+        r7.setReportCount(5);
+        r7.setUpvotes(9);
+        r7.setAcknowledgedAt(LocalDateTime.now().minusHours(3));
+        r7.setResponseDeadline(LocalDateTime.now().plusHours(1));
+        r7.setResolutionDeadline(LocalDateTime.now().plusHours(43));
+        Report savedR7 = reportRepository.save(r7);
+        statusUpdateRepository.save(new StatusUpdate(
+                savedR7, admin, ReportStatus.IN_PROGRESS,
+                "Dewatering pumps deployed at the fort gate. Water level reducing slowly.", null));
+
+        // Report 8: Open drain overflow near Kakatiya University (Sanitation)
+        Report r8 = new Report();
+        r8.setUser(citizen2);
+        r8.setDescription("Open drain completely blocked and overflowing onto the footpath near Kakatiya University main gate.");
+        r8.setPhotoUrl("https://images.unsplash.com/photo-1603771628302-b7e7ad1b9b50?w=600&auto=format&fit=crop&q=60");
+        r8.setFileHash("hash_drain_ku_08");
+        r8.setPhash("718293a4b5c6d7e8");
+        r8.setLatitude(17.9486);
+        r8.setLongitude(79.5700);
+        r8.setAccuracy(11.0);
+        r8.setAddress("Kakatiya University Main Gate Road, Vidyaranyapuri, Warangal 506009");
+        r8.setCapturedAt(LocalDateTime.now().minusHours(7));
+        r8.setCreatedAt(LocalDateTime.now().minusHours(7));
+        r8.setCategory(Category.GARBAGE);
+        r8.setAiSeverity(3);
+        r8.setIsEmergency(false);
+        r8.setAiSummary("Overflowing open drain with garbage accumulation near educational institution");
+        r8.setAiCrewEstimate("4 sanitation workers + 1 JCB excavator");
+        r8.setDepartment(sanitation);
+        r8.setPriorityScore(81); // Sensitive location bonus (KU campus)
+        r8.setStatus(ReportStatus.ACKNOWLEDGED);
+        r8.setReportCount(3);
+        r8.setUpvotes(6);
+        r8.setAcknowledgedAt(LocalDateTime.now().minusHours(4));
+        r8.setResponseDeadline(LocalDateTime.now().plusHours(20));
+        r8.setResolutionDeadline(LocalDateTime.now().plusHours(41));
+        Report savedR8 = reportRepository.save(r8);
+        statusUpdateRepository.save(new StatusUpdate(
+                savedR8, admin, ReportStatus.ACKNOWLEDGED,
+                "Drain de-silting team scheduled for tomorrow at 7 AM.", null));
+
+        // Report 9: Damaged footpath near Station Road (Roads)
+        Report r9 = new Report();
+        r9.setUser(citizen3);
+        r9.setDescription("Footpath completely broken with sharp concrete jutting out near Warangal railway station bus stand.");
+        r9.setPhotoUrl("https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=600&auto=format&fit=crop&q=60");
+        r9.setFileHash("hash_road_station_09");
+        r9.setPhash("8293a4b5c6d7e8f9");
+        r9.setLatitude(17.9715);
+        r9.setLongitude(79.6023);
+        r9.setAccuracy(13.0);
+        r9.setAddress("Station Road, near Bus Stand, Warangal Junction, Warangal 506002");
+        r9.setCapturedAt(LocalDateTime.now().minusHours(10));
+        r9.setCreatedAt(LocalDateTime.now().minusHours(10));
+        r9.setCategory(Category.ROADS);
+        r9.setAiSeverity(3);
+        r9.setIsEmergency(false);
+        r9.setAiSummary("Severely damaged footpath with protruding concrete near transit hub");
+        r9.setAiCrewEstimate("3 road repair workers + concrete equipment");
+        r9.setDepartment(roads);
+        r9.setPriorityScore(67);
+        r9.setStatus(ReportStatus.SUBMITTED);
+        r9.setReportCount(4);
+        r9.setUpvotes(5);
+        r9.setResponseDeadline(LocalDateTime.now().plusHours(14));
+        r9.setResolutionDeadline(LocalDateTime.now().plusDays(7));
+        reportRepository.save(r9);
+
+        // Report 10: Water supply contamination near Mulugu Road (Water)
+        Report r10 = new Report();
+        r10.setUser(citizen1);
+        r10.setDescription("Yellowish, foul-smelling water coming from municipal taps in Mulugu Road colony area.");
+        r10.setPhotoUrl("https://images.unsplash.com/photo-1584467735815-f778f274e296?w=600&auto=format&fit=crop&q=60");
+        r10.setFileHash("hash_water_mulugu_10");
+        r10.setPhash("93a4b5c6d7e8f9a0");
+        r10.setLatitude(17.9840);
+        r10.setLongitude(79.5505);
+        r10.setAccuracy(12.0);
+        r10.setAddress("Mulugu Road, Nakkalagutta, Warangal 506001");
+        r10.setCapturedAt(LocalDateTime.now().minusHours(4));
+        r10.setCreatedAt(LocalDateTime.now().minusHours(4));
+        r10.setCategory(Category.WATER_LEAKAGE);
+        r10.setAiSeverity(4);
+        r10.setIsEmergency(true);
+        r10.setAiSummary("Contaminated municipal water supply — possible sewage line cross-connection");
+        r10.setAiCrewEstimate("3 water board engineers + portable water quality test kit");
+        r10.setDepartment(water);
+        r10.setPriorityScore(102);
+        r10.setStatus(ReportStatus.SUBMITTED);
+        r10.setReportCount(8);
+        r10.setUpvotes(14);
+        r10.setResponseDeadline(LocalDateTime.now().plusHours(20));
+        r10.setResolutionDeadline(LocalDateTime.now().plusHours(68));
+        reportRepository.save(r10);
+
+        // Report 11: Electric pole leaning dangerously (Electricity) near Kazipet
+        Report r11 = new Report();
+        r11.setUser(citizen2);
+        r11.setDescription("Concrete electrical pole is dangerously tilted after last night's winds near Kazipet railway colony.");
+        r11.setPhotoUrl("https://images.unsplash.com/photo-1544724569-5f546fd6f2b5?w=600&auto=format&fit=crop&q=60");
+        r11.setFileHash("hash_pole_kazipet_11");
+        r11.setPhash("a4b5c6d7e8f9a0b1");
+        r11.setLatitude(17.9533);
+        r11.setLongitude(79.5018);
+        r11.setAccuracy(8.0);
+        r11.setAddress("Railway Colony Road, Kazipet, Warangal 506003");
+        r11.setCapturedAt(LocalDateTime.now().minusHours(2));
+        r11.setCreatedAt(LocalDateTime.now().minusHours(2));
+        r11.setCategory(Category.ELECTRICAL_HAZARD);
+        r11.setAiSeverity(5);
+        r11.setIsEmergency(true);
+        r11.setAiSummary("Wind-damaged electrical pole with live cables posing imminent collapse risk");
+        r11.setAiCrewEstimate("2 TSNPDCL linemen + earth anchor team + safety cordon");
+        r11.setDepartment(electricity);
+        r11.setPriorityScore(155);
+        r11.setStatus(ReportStatus.ACKNOWLEDGED);
+        r11.setReportCount(3);
+        r11.setUpvotes(11);
+        r11.setAcknowledgedAt(LocalDateTime.now().minusMinutes(45));
+        r11.setResponseDeadline(LocalDateTime.now().plusHours(1));
+        r11.setResolutionDeadline(LocalDateTime.now().plusHours(23));
+        Report savedR11 = reportRepository.save(r11);
+        statusUpdateRepository.save(new StatusUpdate(
+                savedR11, admin, ReportStatus.ACKNOWLEDGED,
+                "TSNPDCL emergency team alerted. Safety cordon being set up around the pole.", null));
+
+        // Report 12: Garbage burning near Hanmakonda vegetable market (Sanitation) - RESOLVED
+        Report r12 = new Report();
+        r12.setUser(citizen3);
+        r12.setDescription("Massive uncontrolled garbage burning near Hanamkonda weekly market causing heavy smoke affecting residents.");
+        r12.setPhotoUrl("https://images.unsplash.com/photo-1530587191325-3db32d826c18?w=600&auto=format&fit=crop&q=60");
+        r12.setFileHash("hash_burn_market_12");
+        r12.setPhash("b5c6d7e8f9a0b1c2");
+        r12.setLatitude(17.9930);
+        r12.setLongitude(79.5562);
+        r12.setAccuracy(16.0);
+        r12.setAddress("Hanamkonda Weekly Market Road, Subedari, Hanamkonda 506001");
+        r12.setCapturedAt(LocalDateTime.now().minusDays(3));
+        r12.setCreatedAt(LocalDateTime.now().minusDays(3));
+        r12.setCategory(Category.GARBAGE);
+        r12.setAiSeverity(4);
+        r12.setIsEmergency(false);
+        r12.setAiSummary("Illegal waste burning causing air pollution near residential area");
+        r12.setAiCrewEstimate("2 sanitation supervisors + water tanker + fire extinguisher");
+        r12.setDepartment(sanitation);
+        r12.setPriorityScore(88);
+        r12.setStatus(ReportStatus.RESOLVED);
+        r12.setReportCount(2);
+        r12.setUpvotes(8);
+        r12.setAcknowledgedAt(LocalDateTime.now().minusDays(3).plusHours(2));
+        r12.setResolvedAt(LocalDateTime.now().minusDays(2));
+        Report savedR12 = reportRepository.save(r12);
+        statusUpdateRepository.save(new StatusUpdate(
+                savedR12, admin, ReportStatus.RESOLVED,
+                "Fire extinguished. Area cleared. Warning notice issued to market vendors. Bio-waste bins installed.",
+                "https://images.unsplash.com/photo-1530587191325-3db32d826c18?w=600&auto=format&fit=crop&q=60"));
+
+        // Report 13: Pothole swarm on Narsampet Road (Roads - heavily trafficked)
+        Report r13 = new Report();
+        r13.setUser(citizen1);
+        r13.setDescription("Series of 6-7 large potholes on Narsampet main road, vehicles swerving dangerously to avoid them.");
+        r13.setPhotoUrl("https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=600&auto=format&fit=crop&q=60");
+        r13.setFileHash("hash_road_narsampet_13");
+        r13.setPhash("c6d7e8f9a0b1c2d3");
+        r13.setLatitude(18.0055);
+        r13.setLongitude(79.6350);
+        r13.setAccuracy(14.0);
+        r13.setAddress("Narsampet Main Road, Shayampet, Warangal 506132");
+        r13.setCapturedAt(LocalDateTime.now().minusHours(6));
+        r13.setCreatedAt(LocalDateTime.now().minusHours(6));
+        r13.setCategory(Category.ROADS);
+        r13.setAiSeverity(4);
+        r13.setIsEmergency(false);
+        r13.setAiSummary("Multiple large potholes on high-traffic arterial road causing accident risk");
+        r13.setAiCrewEstimate("6 road repair workers + hot-mix asphalt machine + roller");
+        r13.setDepartment(roads);
+        r13.setPriorityScore(86);
+        r13.setStatus(ReportStatus.SUBMITTED);
+        r13.setReportCount(7);
+        r13.setUpvotes(16);
+        r13.setResponseDeadline(LocalDateTime.now().plusHours(18));
+        r13.setResolutionDeadline(LocalDateTime.now().plusDays(6));
+        reportRepository.save(r13);
     }
 
     private Department getOrCreateDepartment(String name, String email, String phone, String description) {

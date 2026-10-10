@@ -205,4 +205,11 @@ export const api = {
 
   triggerSlaCheck: () =>
     apiRequest('/api/admin/demo/trigger-sla', { method: 'POST' }),
+
+  // Chatbot
+  sendChatMessage: (message) =>
+    apiRequest('/api/chatbot/message', {
+      method: 'POST',
+      body: JSON.stringify({ message }),
+    }),
 };

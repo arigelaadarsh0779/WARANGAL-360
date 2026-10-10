@@ -41,6 +41,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Public endpoints
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/chatbot/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/reports/public-map").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/reports/{id}/public").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/contacts/public").permitAll()

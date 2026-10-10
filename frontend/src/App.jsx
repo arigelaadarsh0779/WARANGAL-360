@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import BottomNav from './components/BottomNav';
 import CameraModal from './components/CameraModal';
+import ChatbotWidget from './components/ChatbotWidget';
 import { Camera, LogIn, X, AlertTriangle } from 'lucide-react';
 import { api } from './services/api';
 
@@ -35,6 +36,7 @@ function MainLayout() {
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
+  const lang = user?.preferredLanguage || 'en';
 
   // Gate camera access — guests see a "please login" prompt
   const handleOpenReport = () => {
@@ -97,6 +99,7 @@ function MainLayout() {
         </div>
       )}
       <Navbar onOpenReport={handleOpenReport} />
+      <ChatbotWidget lang={lang} />
 
       <main className="main-content page-enter">
         <Routes>
